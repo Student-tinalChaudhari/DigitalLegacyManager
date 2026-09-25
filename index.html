@@ -1,71 +1,215 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
     <title>Digital Legacy Manager</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
 </head>
+
 
 <body>
 
-    <nav>
-        <div class="logo">Digital Legacy Manager</div>
 
-        <div class="nav-links">
-            <a href="/">Home</a>
-            <a href="/register">Register</a>
-            <a href="/login">Login</a>
+<!-- Navigation Bar -->
+
+<nav class="navbar">
+
+    <div class="logo">
+        🔐 Digital Legacy Manager
+    </div>
+
+    <div>
+        Secure • Private • Simple
+    </div>
+
+</nav>
+
+
+<!-- Hero Section -->
+
+<section class="hero">
+
+    <div class="hero-content">
+
+        <div class="hero-icon">
+            🔐
         </div>
-    </nav>
 
-    <section class="hero">
-
-        <h1>Digital Legacy Manager</h1>
+        <h1>
+            Digital Legacy Manager
+        </h1>
 
         <p>
-            Securely manage your important digital information
-            and decide what should happen to it in the future.
+
+            Securely organize and manage your important
+            digital information, accounts, documents and
+            emergency contacts in one place.
+
         </p>
 
-        <div class="buttons">
-            <a href="/register" class="btn">Get Started</a>
-            <a href="/login" class="btn secondary">Login</a>
-        </div>
 
-    </section>
+        <!-- Get Started Button -->
 
-    <section class="features">
+        <a href="{{ url_for('login') }}"
+           class="primary-btn">
+
+            Get Started
+
+        </a>
+
+    </div>
+
+</section>
+
+
+<!-- Features Section -->
+
+<section class="features">
+
+    <h2>
+        Key Features
+    </h2>
+
+
+    <div class="cards">
+
+
+        <!-- Feature 1 -->
 
         <div class="card">
-            <h2>🔐 Secure</h2>
+
+            <div class="card-icon">
+                🔐
+            </div>
+
+            <h3>
+                Digital Legacy
+            </h3>
+
             <p>
-                Keep important digital information organized
-                and protected.
+
+                Organize important digital
+                information and account details.
+
             </p>
+
         </div>
+
+
+        <!-- Feature 2 -->
 
         <div class="card">
-            <h2>👨‍👩‍👧 Trusted Contacts</h2>
+
+            <div class="card-icon">
+                👨‍👩‍👧
+            </div>
+
+            <h3>
+                Emergency Contacts
+            </h3>
+
             <p>
-                Add trusted people who can manage your
-                digital legacy according to your instructions.
+
+                Store trusted emergency contacts
+                for important situations.
+
             </p>
+
         </div>
+
+
+        <!-- Feature 3 -->
 
         <div class="card">
-            <h2>📁 Digital Assets</h2>
+
+            <div class="card-icon">
+                📄
+            </div>
+
+            <h3>
+                Documents
+            </h3>
+
             <p>
-                Manage important accounts, documents and
-                digital assets in one place.
+
+                Organize important document
+                information in one place.
+
             </p>
+
         </div>
 
-    </section>
 
-    <footer>
-        <p>© 2026 Digital Legacy Manager</p>
-    </footer>
+        <!-- Feature 4 -->
+
+        <div class="card">
+
+            <div class="card-icon">
+                ⚙️
+            </div>
+
+            <h3>
+                Easy Management
+            </h3>
+
+            <p>
+
+                Manage your information through
+                a simple dashboard.
+
+            </p>
+
+        </div>
+
+
+    </div>
+
+</section>
+
+
+<!-- About Section -->
+
+<section class="features">
+
+    <h2>
+        About Digital Legacy Manager
+    </h2>
+
+    <div class="card">
+
+        <p>
+
+            Digital Legacy Manager is a student project
+            designed to help users organize important
+            digital information, documents and emergency
+            contacts in one convenient place.
+
+        </p>
+
+    </div>
+
+</section>
+
+
+<!-- Footer -->
+
+<footer>
+
+    © 2026 Digital Legacy Manager |
+    Student Project
+
+</footer>
+
 
 </body>
+
 </html>
