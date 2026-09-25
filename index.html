@@ -15,199 +15,206 @@
 
 </head>
 
-
 <body>
 
+    <!-- Navigation -->
 
-<!-- Navigation Bar -->
+    <nav class="navbar">
 
-<nav class="navbar">
-
-    <div class="logo">
-        🔐 Digital Legacy Manager
-    </div>
-
-    <div>
-        Secure • Private • Simple
-    </div>
-
-</nav>
-
-
-<!-- Hero Section -->
-
-<section class="hero">
-
-    <div class="hero-content">
-
-        <div class="hero-icon">
-            🔐
+        <div class="logo">
+            🔐 Digital Legacy Manager
         </div>
 
-        <h1>
-            Digital Legacy Manager
-        </h1>
+        <div>
+            Secure • Private • Simple
+        </div>
 
-        <p>
-
-            Securely organize and manage your important
-            digital information, accounts, documents and
-            emergency contacts in one place.
-
-        </p>
+    </nav>
 
 
-        <!-- Get Started Button -->
+    <!-- Hero Section -->
 
-        <a href="{{ url_for('login') }}"
-           class="primary-btn">
+    <section class="hero">
 
-            Get Started
+        <div class="hero-content">
 
-        </a>
-
-    </div>
-
-</section>
-
-
-<!-- Features Section -->
-
-<section class="features">
-
-    <h2>
-        Key Features
-    </h2>
-
-
-    <div class="cards">
-
-
-        <!-- Feature 1 -->
-
-        <div class="card">
-
-            <div class="card-icon">
+            <div class="hero-icon">
                 🔐
             </div>
 
-            <h3>
-                Digital Legacy
-            </h3>
+            <h1>
+                Digital Legacy Manager
+            </h1>
 
             <p>
 
-                Organize important digital
-                information and account details.
+                Organize and manage your important digital
+                information, documents and emergency contacts
+                in one place.
 
             </p>
 
+
+            <!-- IMPORTANT: Login Link -->
+
+            <a href="{{ url_for('login') }}"
+               class="primary-btn">
+
+                Get Started
+
+            </a>
+
         </div>
 
+    </section>
 
-        <!-- Feature 2 -->
+
+    <!-- Features -->
+
+    <section class="features">
+
+        <h2>
+            Key Features
+        </h2>
+
+
+        <div class="cards">
+
+
+            <!-- Digital Legacy -->
+
+            <div class="card">
+
+                <div class="card-icon">
+                    📁
+                </div>
+
+                <h3>
+                    Digital Legacy
+                </h3>
+
+                <p>
+
+                    Organize important digital information
+                    and account details.
+
+                </p>
+
+            </div>
+
+
+            <!-- Emergency Contacts -->
+
+            <div class="card">
+
+                <div class="card-icon">
+                    👨‍👩‍👧
+                </div>
+
+                <h3>
+                    Emergency Contacts
+                </h3>
+
+                <p>
+
+                    Store trusted emergency contacts
+                    for important situations.
+
+                </p>
+
+            </div>
+
+
+            <!-- Documents -->
+
+            <div class="card">
+
+                <div class="card-icon">
+                    📄
+                </div>
+
+                <h3>
+                    Documents
+                </h3>
+
+                <p>
+
+                    Organize important document
+                    information in one place.
+
+                </p>
+
+            </div>
+
+
+            <!-- Backup -->
+
+            <div class="card">
+
+                <div class="card-icon">
+                    💾
+                </div>
+
+                <h3>
+                    Backup
+                </h3>
+
+                <p>
+
+                    Keep your important information
+                    organized for future access.
+
+                </p>
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+    <!-- Security Information -->
+
+    <section class="features">
+
+        <h2>
+            🔐 Security Information
+        </h2>
 
         <div class="card">
 
-            <div class="card-icon">
-                👨‍👩‍👧
-            </div>
-
-            <h3>
-                Emergency Contacts
-            </h3>
-
             <p>
 
-                Store trusted emergency contacts
-                for important situations.
+                Digital Legacy Manager is designed as a
+                student project to demonstrate how users
+                can organize digital information,
+                documents and emergency contacts.
+
+            </p>
+
+            <p style="margin-top: 15px;">
+
+                For this demonstration, please use
+                sample information and do not enter
+                real passwords, banking credentials or
+                sensitive personal documents.
 
             </p>
 
         </div>
 
-
-        <!-- Feature 3 -->
-
-        <div class="card">
-
-            <div class="card-icon">
-                📄
-            </div>
-
-            <h3>
-                Documents
-            </h3>
-
-            <p>
-
-                Organize important document
-                information in one place.
-
-            </p>
-
-        </div>
+    </section>
 
 
-        <!-- Feature 4 -->
+    <!-- Footer -->
 
-        <div class="card">
+    <footer>
 
-            <div class="card-icon">
-                ⚙️
-            </div>
+        © 2026 Digital Legacy Manager |
+        Student Project
 
-            <h3>
-                Easy Management
-            </h3>
-
-            <p>
-
-                Manage your information through
-                a simple dashboard.
-
-            </p>
-
-        </div>
-
-
-    </div>
-
-</section>
-
-
-<!-- About Section -->
-
-<section class="features">
-
-    <h2>
-        About Digital Legacy Manager
-    </h2>
-
-    <div class="card">
-
-        <p>
-
-            Digital Legacy Manager is a student project
-            designed to help users organize important
-            digital information, documents and emergency
-            contacts in one convenient place.
-
-        </p>
-
-    </div>
-
-</section>
-
-
-<!-- Footer -->
-
-<footer>
-
-    © 2026 Digital Legacy Manager |
-    Student Project
-
-</footer>
+    </footer>
 
 
 </body>
