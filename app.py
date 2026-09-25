@@ -1,608 +1,1488 @@
-import streamlit as st
-
-# -----------------------------
-# Page Configuration
-# -----------------------------
-st.set_page_config(
-    page_title="Digital Legacy Manager",
-    page_icon="🔐",
-    layout="wide"
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session,
+    send_file,
+    flash
 )
 
-# -----------------------------
-# Session State
-# -----------------------------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+import os
+import uuid
+import sqlite3
+import io
+import smtplib
+from email.message import EmailMessage
+from functools import wraps
 
-if "user_name" not in st.session_state:
-    st.session_state.user_name = ""
+import pyotp
 
-if "email" not in st.session_state:
-    st.session_state.email = ""
+from cryptography.fernet import Fernet
 
-if "legacy" not in st.session_state:
-    st.session_state.legacy = []
-
-if "contacts" not in st.session_state:
-    st.session_state.contacts = []
-
-if "documents" not in st.session_state:
-    st.session_state.documents = []
+from werkzeug.utils import secure_filename
+from werkzeug.security import (
+    generate_password_hash,
+    check_password_hash
+)
 
 
-# -----------------------------
-# Custom CSS
-# -----------------------------
-st.markdown("""
-<style>
+# =========================================================
+# APP
+# =========================================================
 
-.main {
-    background-color: #f5f3ff;
+app = Flask(__name__)
+
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "digital-legacy-manager-local-demo-secret-2026"
+)
+
+
+# =========================================================
+# DATABASE
+# =========================================================
+
+DATABASE = "database.db"
+
+
+def get_db_connection():
+
+    connection = sqlite3.connect(DATABASE)
+
+    connection.row_factory = sqlite3.Row
+
+    return connection
+
+
+# =========================================================
+# ENCRYPTION KEY
+# =========================================================
+
+KEY_FILE = "encryption.key"
+
+
+def load_encryption_key():
+
+    # First try environment variable
+    environment_key = os.environ.get(
+        "ENCRYPTION_KEY"
+    )
+
+    if environment_key:
+
+        try:
+
+            return environment_key.encode()
+
+        except Exception:
+
+            pass
+
+    # Otherwise use local key file
+    if os.path.exists(KEY_FILE):
+
+        with open(
+            KEY_FILE,
+            "rb"
+        ) as key_file:
+
+            key = key_file.read()
+
+        try:
+
+            Fernet(key)
+
+            return key
+
+        except Exception:
+
+            pass
+
+    # Generate new key
+    new_key = Fernet.generate_key()
+
+    with open(
+        KEY_FILE,
+        "wb"
+    ) as key_file:
+
+        key_file.write(new_key)
+
+    return new_key
+
+
+ENCRYPTION_KEY = load_encryption_key()
+
+fernet = Fernet(
+    ENCRYPTION_KEY
+)
+
+
+# =========================================================
+# UPLOAD SETTINGS
+# =========================================================
+
+UPLOAD_FOLDER = "uploads"
+
+ALLOWED_EXTENSIONS = {
+    "pdf",
+    "jpg",
+    "jpeg",
+    "png"
 }
 
-.title {
-    text-align: center;
-    color: #4c1d95;
-    font-size: 42px;
-    font-weight: bold;
-}
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
-.subtitle {
-    text-align: center;
-    color: #666666;
-    font-size: 18px;
-    margin-bottom: 30px;
-}
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-.card {
-    background-color: white;
-    padding: 25px;
-    border-radius: 15px;
-    margin-bottom: 20px;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.08);
-}
+app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
 
-</style>
-""", unsafe_allow_html=True)
+os.makedirs(
+    UPLOAD_FOLDER,
+    exist_ok=True
+)
 
 
-# ============================================================
-# HOME PAGE
-# ============================================================
+# =========================================================
+# TEMPORARY DATA
+# =========================================================
 
-if not st.session_state.logged_in:
+legacy_items = []
 
-    st.markdown(
-        '<div class="title">🔐 Digital Legacy Manager</div>',
-        unsafe_allow_html=True
+emergency_contacts = []
+
+
+# =========================================================
+# EMAIL SETTINGS
+# =========================================================
+
+SMTP_HOST = os.environ.get(
+    "SMTP_HOST"
+)
+
+SMTP_PORT = os.environ.get(
+    "SMTP_PORT",
+    "587"
+)
+
+SMTP_USERNAME = os.environ.get(
+    "SMTP_USERNAME"
+)
+
+SMTP_PASSWORD = os.environ.get(
+    "SMTP_PASSWORD"
+)
+
+NOTIFICATION_FROM = os.environ.get(
+    "NOTIFICATION_FROM",
+    SMTP_USERNAME
+)
+
+
+def send_email_notification(
+    recipient,
+    subject,
+    message
+):
+
+    # Email is optional.
+    # App will work even without SMTP settings.
+
+    if not all([
+        SMTP_HOST,
+        SMTP_USERNAME,
+        SMTP_PASSWORD,
+        recipient
+    ]):
+
+        print(
+            "Email notification skipped: SMTP not configured."
+        )
+
+        return False
+
+    try:
+
+        email = EmailMessage()
+
+        email["From"] = NOTIFICATION_FROM
+
+        email["To"] = recipient
+
+        email["Subject"] = subject
+
+        email.set_content(
+            message
+        )
+
+        with smtplib.SMTP(
+            SMTP_HOST,
+            int(SMTP_PORT)
+        ) as server:
+
+            server.starttls()
+
+            server.login(
+                SMTP_USERNAME,
+                SMTP_PASSWORD
+            )
+
+            server.send_message(
+                email
+            )
+
+        print(
+            "Email notification sent."
+        )
+
+        return True
+
+    except Exception as error:
+
+        print(
+            "Email notification failed:",
+            error
+        )
+
+        return False
+
+
+# =========================================================
+# USERS TABLE
+# =========================================================
+
+def create_users_table():
+
+    connection = get_db_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            name TEXT NOT NULL,
+
+            email TEXT UNIQUE NOT NULL,
+
+            password_hash TEXT NOT NULL,
+
+            two_factor_secret TEXT,
+
+            two_factor_enabled INTEGER DEFAULT 0,
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP
+        )
+        """
     )
 
-    st.markdown(
-        '<div class="subtitle">'
-        'Organize and manage your important digital information, '
-        'documents and emergency contacts in one place.'
-        '</div>',
-        unsafe_allow_html=True
+    cursor.execute(
+        "PRAGMA table_info(users)"
     )
 
-    st.markdown("---")
+    columns = [
+        row["name"]
+        for row in cursor.fetchall()
+    ]
 
-    st.subheader("🌟 Key Features")
+    if "two_factor_secret" not in columns:
 
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.markdown("### 📁")
-        st.write("**Digital Legacy**")
-        st.write(
-            "Organize important digital information "
-            "and account details."
+        cursor.execute(
+            """
+            ALTER TABLE users
+            ADD COLUMN two_factor_secret TEXT
+            """
         )
 
-    with col2:
-        st.markdown("### 👨‍👩‍👧")
-        st.write("**Emergency Contacts**")
-        st.write(
-            "Store trusted contacts for emergency situations."
+    if "two_factor_enabled" not in columns:
+
+        cursor.execute(
+            """
+            ALTER TABLE users
+            ADD COLUMN two_factor_enabled INTEGER DEFAULT 0
+            """
         )
 
-    with col3:
-        st.markdown("### 📄")
-        st.write("**Documents**")
-        st.write(
-            "Keep important document information organized."
+    connection.commit()
+
+    connection.close()
+
+
+# =========================================================
+# DOCUMENTS TABLE
+# =========================================================
+
+def create_documents_table():
+
+    connection = get_db_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS documents (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            user_email TEXT NOT NULL,
+
+            name TEXT NOT NULL,
+
+            document_type TEXT NOT NULL,
+
+            description TEXT,
+
+            original_filename TEXT NOT NULL,
+
+            stored_filename TEXT NOT NULL,
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP
         )
-
-    with col4:
-        st.markdown("### 💾")
-        st.write("**Backup & Organization**")
-        st.write(
-            "Keep your important information organized."
-        )
-
-    st.markdown("---")
-
-    st.subheader("🔐 Security Information")
-
-    st.info(
-        "This is a student project demonstration. "
-        "Use sample information only. Do not enter real "
-        "passwords, banking credentials or sensitive documents."
+        """
     )
 
-    st.markdown("---")
+    connection.commit()
 
-    st.subheader("🚀 Get Started")
-
-    with st.form("login_form"):
-
-        name = st.text_input(
-            "Your Name",
-            placeholder="Enter your name"
-        )
-
-        email = st.text_input(
-            "Email Address",
-            placeholder="Enter your email"
-        )
-
-        submitted = st.form_submit_button(
-            "Get Started 🔐",
-            use_container_width=True
-        )
-
-        if submitted:
-
-            if name and email:
-
-                st.session_state.logged_in = True
-                st.session_state.user_name = name
-                st.session_state.email = email
-
-                st.rerun()
-
-            else:
-
-                st.error(
-                    "Please enter your name and email."
-                )
+    connection.close()
 
 
-# ============================================================
-# LOGGED-IN APPLICATION
-# ============================================================
+# =========================================================
+# FILE VALIDATION
+# =========================================================
 
-else:
+def allowed_file(filename):
 
-    # -------------------------
-    # Sidebar
-    # -------------------------
-
-    st.sidebar.title("🔐 Digital Legacy Manager")
-
-    st.sidebar.write(
-        f"Welcome, **{st.session_state.user_name}**"
+    return (
+        "."
+        in filename
+        and
+        filename.rsplit(
+            ".",
+            1
+        )[1].lower()
+        in ALLOWED_EXTENSIONS
     )
 
-    page = st.sidebar.radio(
-        "Navigation",
-        [
-            "🏠 Dashboard",
-            "📁 Digital Legacy",
-            "👨‍👩‍👧 Emergency Contacts",
-            "📄 Documents",
-            "⚙️ Settings"
-        ]
+
+# =========================================================
+# LOGIN REQUIRED
+# =========================================================
+
+def login_required(view_function):
+
+    @wraps(view_function)
+
+    def wrapped_view(
+        *args,
+        **kwargs
+    ):
+
+        if "user" not in session:
+
+            flash(
+                "Please login to continue."
+            )
+
+            return redirect(
+                url_for("login")
+            )
+
+        if not session.get(
+            "2fa_verified",
+            False
+        ):
+
+            session.clear()
+
+            flash(
+                "Please complete Two-Factor Authentication."
+            )
+
+            return redirect(
+                url_for("login")
+            )
+
+        return view_function(
+            *args,
+            **kwargs
+        )
+
+    return wrapped_view
+
+
+# =========================================================
+# HOME
+# =========================================================
+
+@app.route("/")
+def index():
+
+    return render_template(
+        "index.html"
     )
 
-    if st.sidebar.button("Logout"):
 
-        st.session_state.logged_in = False
-        st.rerun()
+# =========================================================
+# REGISTER
+# =========================================================
 
+@app.route(
+    "/register",
+    methods=["GET", "POST"]
+)
+def register():
 
-    # ========================================================
-    # DASHBOARD
-    # ========================================================
+    if request.method == "POST":
 
-    if page == "🏠 Dashboard":
+        name = request.form.get(
+            "name",
+            ""
+        ).strip()
 
-        st.title(
-            f"Hello, {st.session_state.user_name} 👋"
+        email = request.form.get(
+            "email",
+            ""
+        ).strip().lower()
+
+        password = request.form.get(
+            "password",
+            ""
         )
 
-        st.write(
-            "Welcome to your Digital Legacy Manager dashboard."
+        confirm_password = request.form.get(
+            "confirm_password",
+            ""
         )
 
-        st.markdown("---")
+        if not name or not email or not password:
 
-        st.subheader("📊 Your Summary")
-
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            st.metric(
-                "📁 Legacy Items",
-                len(st.session_state.legacy)
+            flash(
+                "Please fill all required fields."
             )
 
-        with col2:
-            st.metric(
-                "👨‍👩‍👧 Emergency Contacts",
-                len(st.session_state.contacts)
+            return redirect(
+                url_for("register")
             )
 
-        with col3:
-            st.metric(
-                "📄 Documents",
-                len(st.session_state.documents)
+        if len(password) < 8:
+
+            flash(
+                "Password must contain at least 8 characters."
             )
 
-        st.markdown("---")
-
-        st.subheader("📌 Manage Your Digital Legacy")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-
-            st.markdown(
-                '<div class="card">'
-                '<h3>📁 Digital Legacy</h3>'
-                '<p>Manage important digital information.</p>'
-                '</div>',
-                unsafe_allow_html=True
+            return redirect(
+                url_for("register")
             )
 
-        with col2:
+        if password != confirm_password:
 
-            st.markdown(
-                '<div class="card">'
-                '<h3>👨‍👩‍👧 Emergency Contacts</h3>'
-                '<p>Manage trusted emergency contacts.</p>'
-                '</div>',
-                unsafe_allow_html=True
+            flash(
+                "Passwords do not match."
             )
 
-        col3, col4 = st.columns(2)
-
-        with col3:
-
-            st.markdown(
-                '<div class="card">'
-                '<h3>📄 Documents</h3>'
-                '<p>Organize important documents.</p>'
-                '</div>',
-                unsafe_allow_html=True
+            return redirect(
+                url_for("register")
             )
 
-        with col4:
+        connection = get_db_connection()
 
-            st.markdown(
-                '<div class="card">'
-                '<h3>⚙️ Settings</h3>'
-                '<p>View account information.</p>'
-                '</div>',
-                unsafe_allow_html=True
+        existing_user = connection.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE email = ?
+            """,
+            (email,)
+        ).fetchone()
+
+        if existing_user:
+
+            connection.close()
+
+            flash(
+                "An account with this email already exists."
             )
 
+            return redirect(
+                url_for("register")
+            )
 
-    # ========================================================
-    # DIGITAL LEGACY
-    # ========================================================
-
-    elif page == "📁 Digital Legacy":
-
-        st.title("📁 My Digital Legacy")
-
-        st.write(
-            "Add and manage important digital information."
+        password_hash = generate_password_hash(
+            password
         )
 
-        st.markdown("---")
+        two_factor_secret = pyotp.random_base32()
 
-        with st.form("legacy_form"):
-
-            title = st.text_input(
-                "Title",
-                placeholder="Example: Gmail Account"
+        connection.execute(
+            """
+            INSERT INTO users
+            (
+                name,
+                email,
+                password_hash,
+                two_factor_secret,
+                two_factor_enabled
             )
-
-            category = st.selectbox(
-                "Category",
-                [
-                    "Email",
-                    "Social Media",
-                    "Banking",
-                    "Documents",
-                    "Other"
-                ]
+            VALUES (?, ?, ?, ?, 0)
+            """,
+            (
+                name,
+                email,
+                password_hash,
+                two_factor_secret
             )
-
-            description = st.text_area(
-                "Description",
-                placeholder="Enter important information"
-            )
-
-            save = st.form_submit_button(
-                "Save Legacy",
-                use_container_width=True
-            )
-
-            if save:
-
-                if title and description:
-
-                    st.session_state.legacy.append(
-                        {
-                            "title": title,
-                            "category": category,
-                            "description": description
-                        }
-                    )
-
-                    st.success(
-                        "Legacy information saved successfully!"
-                    )
-
-                else:
-
-                    st.error(
-                        "Please fill all required fields."
-                    )
-
-        st.markdown("---")
-
-        st.subheader("📋 Saved Legacy Information")
-
-        if st.session_state.legacy:
-
-            for item in st.session_state.legacy:
-
-                with st.container(border=True):
-
-                    st.write(
-                        f"### 📄 {item['title']}"
-                    )
-
-                    st.write(
-                        f"**Category:** {item['category']}"
-                    )
-
-                    st.write(
-                        item["description"]
-                    )
-
-        else:
-
-            st.info(
-                "No legacy information added yet."
-            )
-
-
-    # ========================================================
-    # EMERGENCY CONTACTS
-    # ========================================================
-
-    elif page == "👨‍👩‍👧 Emergency Contacts":
-
-        st.title("👨‍👩‍👧 Emergency Contacts")
-
-        st.write(
-            "Add trusted people who can be contacted in an emergency."
         )
 
-        st.markdown("---")
+        connection.commit()
 
-        with st.form("contact_form"):
+        connection.close()
 
-            contact_name = st.text_input(
-                "Contact Name",
-                placeholder="Example: Mother"
-            )
+        send_email_notification(
+            email,
+            "Digital Legacy Manager - Account Created",
+            f"""
+Hello {name},
 
-            phone = st.text_input(
-                "Phone Number",
-                placeholder="Example: 9000000001"
-            )
+Your Digital Legacy Manager account has been created successfully.
 
-            relation = st.text_input(
-                "Relation",
-                placeholder="Example: Mother"
-            )
+Two-Factor Authentication will be configured during your first login.
 
-            save_contact = st.form_submit_button(
-                "Save Contact",
-                use_container_width=True
-            )
-
-            if save_contact:
-
-                if contact_name and phone and relation:
-
-                    st.session_state.contacts.append(
-                        {
-                            "name": contact_name,
-                            "phone": phone,
-                            "relation": relation
-                        }
-                    )
-
-                    st.success(
-                        "Emergency contact saved successfully!"
-                    )
-
-                else:
-
-                    st.error(
-                        "Please fill all required fields."
-                    )
-
-        st.markdown("---")
-
-        st.subheader("📋 Saved Contacts")
-
-        if st.session_state.contacts:
-
-            for contact in st.session_state.contacts:
-
-                with st.container(border=True):
-
-                    st.write(
-                        f"### 👤 {contact['name']}"
-                    )
-
-                    st.write(
-                        f"**Relation:** {contact['relation']}"
-                    )
-
-                    st.write(
-                        f"📞 {contact['phone']}"
-                    )
-
-        else:
-
-            st.info(
-                "No emergency contacts added yet."
-            )
-
-
-    # ========================================================
-    # DOCUMENTS
-    # ========================================================
-
-    elif page == "📄 Documents":
-
-        st.title("📄 My Documents")
-
-        st.write(
-            "Add and organize important document information."
+Thank you,
+Digital Legacy Manager
+"""
         )
 
-        st.markdown("---")
-
-        with st.form("document_form"):
-
-            document_name = st.text_input(
-                "Document Name",
-                placeholder="Example: Degree Certificate"
-            )
-
-            document_type = st.selectbox(
-                "Document Type",
-                [
-                    "Identity Document",
-                    "Education",
-                    "Financial",
-                    "Medical",
-                    "Legal",
-                    "Other"
-                ]
-            )
-
-            document_description = st.text_area(
-                "Description",
-                placeholder="Enter document information"
-            )
-
-            save_document = st.form_submit_button(
-                "Save Document",
-                use_container_width=True
-            )
-
-            if save_document:
-
-                if document_name:
-
-                    st.session_state.documents.append(
-                        {
-                            "name": document_name,
-                            "type": document_type,
-                            "description": document_description
-                        }
-                    )
-
-                    st.success(
-                        "Document information saved successfully!"
-                    )
-
-                else:
-
-                    st.error(
-                        "Please enter document name."
-                    )
-
-        st.markdown("---")
-
-        st.subheader("📋 Saved Documents")
-
-        if st.session_state.documents:
-
-            for document in st.session_state.documents:
-
-                with st.container(border=True):
-
-                    st.write(
-                        f"### 📄 {document['name']}"
-                    )
-
-                    st.write(
-                        f"**Type:** {document['type']}"
-                    )
-
-                    if document["description"]:
-
-                        st.write(
-                            document["description"]
-                        )
-
-        else:
-
-            st.info(
-                "No documents added yet."
-            )
-
-
-    # ========================================================
-    # SETTINGS
-    # ========================================================
-
-    elif page == "⚙️ Settings":
-
-        st.title("⚙️ Settings")
-
-        st.write(
-            "Your Digital Legacy Manager account information."
+        flash(
+            "Account created successfully. Please login."
         )
 
-        st.markdown("---")
-
-        st.subheader("👤 Profile Information")
-
-        st.text_input(
-            "Name",
-            value=st.session_state.user_name,
-            disabled=True
+        return redirect(
+            url_for("login")
         )
 
-        st.text_input(
-            "Email",
-            value=st.session_state.email,
-            disabled=True
+    return render_template(
+        "register.html"
+    )
+
+
+# =========================================================
+# LOGIN
+# =========================================================
+
+@app.route(
+    "/login",
+    methods=["GET", "POST"]
+)
+def login():
+
+    if request.method == "POST":
+
+        email = request.form.get(
+            "email",
+            ""
+        ).strip().lower()
+
+        password = request.form.get(
+            "password",
+            ""
         )
 
-        st.markdown("---")
+        connection = get_db_connection()
 
-        st.subheader("ℹ️ About This Project")
+        user = connection.execute(
+            """
+            SELECT *
+            FROM users
+            WHERE email = ?
+            """,
+            (email,)
+        ).fetchone()
 
-        st.write(
-            "Digital Legacy Manager is a student project "
-            "designed to help users organize digital information, "
-            "emergency contacts and document details in one place."
+        connection.close()
+
+        if not user:
+
+            flash(
+                "Invalid email or password."
+            )
+
+            return redirect(
+                url_for("login")
+            )
+
+        if not check_password_hash(
+            user["password_hash"],
+            password
+        ):
+
+            flash(
+                "Invalid email or password."
+            )
+
+            return redirect(
+                url_for("login")
+            )
+
+        session.clear()
+
+        session["pending_2fa_email"] = email
+
+        session["pending_2fa_name"] = user["name"]
+
+        if user["two_factor_enabled"]:
+
+            return redirect(
+                url_for("verify_2fa")
+            )
+
+        return redirect(
+            url_for("setup_2fa")
         )
 
-        st.info(
-            "For demonstration purposes, use sample information only."
+    return render_template(
+        "login.html"
+    )
+
+
+# =========================================================
+# SETUP 2FA
+# =========================================================
+
+@app.route(
+    "/setup-2fa",
+    methods=["GET", "POST"]
+)
+def setup_2fa():
+
+    email = session.get(
+        "pending_2fa_email"
+    )
+
+    if not email:
+
+        return redirect(
+            url_for("login")
         )
+
+    connection = get_db_connection()
+
+    user = connection.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE email = ?
+        """,
+        (email,)
+    ).fetchone()
+
+    if not user:
+
+        connection.close()
+
+        session.clear()
+
+        return redirect(
+            url_for("login")
+        )
+
+    secret = user["two_factor_secret"]
+
+    if not secret:
+
+        secret = pyotp.random_base32()
+
+        connection.execute(
+            """
+            UPDATE users
+            SET two_factor_secret = ?
+            WHERE email = ?
+            """,
+            (
+                secret,
+                email
+            )
+        )
+
+        connection.commit()
+
+    connection.close()
+
+    if request.method == "POST":
+
+        otp = request.form.get(
+            "otp",
+            ""
+        ).strip()
+
+        if not otp.isdigit() or len(otp) != 6:
+
+            flash(
+                "Please enter a valid 6-digit code."
+            )
+
+            return redirect(
+                url_for("setup_2fa")
+            )
+
+        if not pyotp.TOTP(
+            secret
+        ).verify(
+            otp,
+            valid_window=1
+        ):
+
+            flash(
+                "Invalid authentication code."
+            )
+
+            return redirect(
+                url_for("setup_2fa")
+            )
+
+        connection = get_db_connection()
+
+        connection.execute(
+            """
+            UPDATE users
+            SET two_factor_enabled = 1
+            WHERE email = ?
+            """,
+            (email,)
+        )
+
+        connection.commit()
+
+        connection.close()
+
+        name = session.get(
+            "pending_2fa_name",
+            "User"
+        )
+
+        session.clear()
+
+        session["user"] = name
+
+        session["email"] = email
+
+        session["2fa_verified"] = True
+
+        send_email_notification(
+            email,
+            "Digital Legacy Manager - 2FA Enabled",
+            f"""
+Hello {name},
+
+Two-Factor Authentication has been successfully enabled.
+
+Thank you,
+Digital Legacy Manager
+"""
+        )
+
+        flash(
+            "Two-Factor Authentication enabled successfully."
+        )
+
+        return redirect(
+            url_for("dashboard")
+        )
+
+    otp_uri = pyotp.TOTP(
+        secret
+    ).provisioning_uri(
+        name=email,
+        issuer_name="Digital Legacy Manager"
+    )
+
+    return render_template(
+        "setup_2fa.html",
+        secret=secret,
+        otp_uri=otp_uri
+    )
+
+
+# =========================================================
+# VERIFY 2FA
+# =========================================================
+
+@app.route(
+    "/verify-2fa",
+    methods=["GET", "POST"]
+)
+def verify_2fa():
+
+    email = session.get(
+        "pending_2fa_email"
+    )
+
+    if not email:
+
+        return redirect(
+            url_for("login")
+        )
+
+    connection = get_db_connection()
+
+    user = connection.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE email = ?
+        """,
+        (email,)
+    ).fetchone()
+
+    connection.close()
+
+    if not user:
+
+        session.clear()
+
+        return redirect(
+            url_for("login")
+        )
+
+    if request.method == "POST":
+
+        otp = request.form.get(
+            "otp",
+            ""
+        ).strip()
+
+        if not otp.isdigit() or len(otp) != 6:
+
+            flash(
+                "Please enter a valid 6-digit code."
+            )
+
+            return redirect(
+                url_for("verify_2fa")
+            )
+
+        if not pyotp.TOTP(
+            user["two_factor_secret"]
+        ).verify(
+            otp,
+            valid_window=1
+        ):
+
+            flash(
+                "Invalid authentication code."
+            )
+
+            return redirect(
+                url_for("verify_2fa")
+            )
+
+        session.clear()
+
+        session["user"] = user["name"]
+
+        session["email"] = user["email"]
+
+        session["2fa_verified"] = True
+
+        send_email_notification(
+            user["email"],
+            "Digital Legacy Manager - New Login",
+            f"""
+Hello {user["name"]},
+
+A successful login was completed on your Digital Legacy Manager account.
+
+If you did not perform this login, please secure your account.
+
+Thank you,
+Digital Legacy Manager
+"""
+        )
+
+        return redirect(
+            url_for("dashboard")
+        )
+
+    return render_template(
+        "verify_2fa.html"
+    )
+
+
+# =========================================================
+# DASHBOARD
+# =========================================================
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+
+    connection = get_db_connection()
+
+    document_count = connection.execute(
+        """
+        SELECT COUNT(*)
+        FROM documents
+        WHERE user_email = ?
+        """,
+        (session["email"],)
+    ).fetchone()[0]
+
+    connection.close()
+
+    return render_template(
+        "dashboard.html",
+        user=session["user"],
+        items=legacy_items,
+        contacts=emergency_contacts,
+        documents_count=document_count
+    )
+
+
+# =========================================================
+# LEGACY
+# =========================================================
+
+@app.route("/legacy")
+@login_required
+def legacy():
+
+    return render_template(
+        "legacy_instructions.html",
+        items=legacy_items
+    )
+
+
+@app.route(
+    "/add-legacy",
+    methods=["POST"]
+)
+@login_required
+def add_legacy():
+
+    title = request.form.get(
+        "title",
+        ""
+    ).strip()
+
+    instruction = request.form.get(
+        "instruction",
+        ""
+    ).strip()
+
+    if title and instruction:
+
+        legacy_items.append(
+            {
+                "title": title,
+                "instruction": instruction
+            }
+        )
+
+        flash(
+            "Legacy instruction added successfully."
+        )
+
+    return redirect(
+        url_for("legacy")
+    )
+
+
+# =========================================================
+# CONTACTS
+# =========================================================
+
+@app.route("/contacts")
+@login_required
+def contacts():
+
+    return render_template(
+        "trusted_contacts.html",
+        contacts=emergency_contacts
+    )
+
+
+@app.route(
+    "/add-contact",
+    methods=["POST"]
+)
+@login_required
+def add_contact():
+
+    name = request.form.get(
+        "name",
+        ""
+    ).strip()
+
+    email = request.form.get(
+        "email",
+        ""
+    ).strip()
+
+    phone = request.form.get(
+        "phone",
+        ""
+    ).strip()
+
+    if name:
+
+        emergency_contacts.append(
+            {
+                "name": name,
+                "email": email,
+                "phone": phone
+            }
+        )
+
+        flash(
+            "Trusted contact added successfully."
+        )
+
+    return redirect(
+        url_for("contacts")
+    )
+
+
+# =========================================================
+# DOCUMENTS
+# =========================================================
+
+@app.route("/documents")
+@login_required
+def documents():
+
+    connection = get_db_connection()
+
+    documents_list = connection.execute(
+        """
+        SELECT *
+        FROM documents
+        WHERE user_email = ?
+        ORDER BY id DESC
+        """,
+        (session["email"],)
+    ).fetchall()
+
+    connection.close()
+
+    return render_template(
+        "documents.html",
+        documents=documents_list
+    )
+
+
+# =========================================================
+# ADD DOCUMENT
+# =========================================================
+
+@app.route(
+    "/add-document",
+    methods=["POST"]
+)
+@login_required
+def add_document():
+
+    document_name = request.form.get(
+        "document_name",
+        ""
+    ).strip()
+
+    document_type = request.form.get(
+        "document_type",
+        ""
+    ).strip()
+
+    description = request.form.get(
+        "description",
+        ""
+    ).strip()
+
+    document_file = request.files.get(
+        "document_file"
+    )
+
+    if not document_name:
+
+        flash(
+            "Document name is required."
+        )
+
+        return redirect(
+            url_for("documents")
+        )
+
+    if not document_type:
+
+        flash(
+            "Document type is required."
+        )
+
+        return redirect(
+            url_for("documents")
+        )
+
+    if not document_file:
+
+        flash(
+            "Please select a document."
+        )
+
+        return redirect(
+            url_for("documents")
+        )
+
+    if document_file.filename == "":
+
+        flash(
+            "Please select a document."
+        )
+
+        return redirect(
+            url_for("documents")
+        )
+
+    if not allowed_file(
+        document_file.filename
+    ):
+
+        flash(
+            "Only PDF, JPG, JPEG and PNG files are allowed."
+        )
+
+        return redirect(
+            url_for("documents")
+        )
+
+    original_filename = secure_filename(
+        document_file.filename
+    )
+
+    original_data = document_file.read()
+
+    if not original_data:
+
+        flash(
+            "The selected file is empty."
+        )
+
+        return redirect(
+            url_for("documents")
+        )
+
+    encrypted_data = fernet.encrypt(
+        original_data
+    )
+
+    stored_filename = (
+        uuid.uuid4().hex
+        + ".enc"
+    )
+
+    stored_path = os.path.join(
+        UPLOAD_FOLDER,
+        stored_filename
+    )
+
+    with open(
+        stored_path,
+        "wb"
+    ) as encrypted_file:
+
+        encrypted_file.write(
+            encrypted_data
+        )
+
+    connection = get_db_connection()
+
+    connection.execute(
+        """
+        INSERT INTO documents
+        (
+            user_email,
+            name,
+            document_type,
+            description,
+            original_filename,
+            stored_filename
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            session["email"],
+            document_name,
+            document_type,
+            description,
+            original_filename,
+            stored_filename
+        )
+    )
+
+    connection.commit()
+
+    connection.close()
+
+    send_email_notification(
+        session["email"],
+        "Digital Legacy Manager - Document Uploaded",
+        f"""
+Hello {session["user"]},
+
+A new document was uploaded successfully.
+
+Document:
+{document_name}
+
+Type:
+{document_type}
+
+The document is stored in encrypted form.
+
+Thank you,
+Digital Legacy Manager
+"""
+    )
+
+    flash(
+        "Document encrypted and uploaded successfully!"
+    )
+
+    return redirect(
+        url_for("documents")
+    )
+
+
+# =========================================================
+# VIEW DOCUMENT
+# =========================================================
+
+@app.route(
+    "/document/<filename>"
+)
+@login_required
+def view_document(filename):
+
+    connection = get_db_connection()
+
+    document = connection.execute(
+        """
+        SELECT *
+        FROM documents
+        WHERE stored_filename = ?
+        AND user_email = ?
+        """,
+        (
+            filename,
+            session["email"]
+        )
+    ).fetchone()
+
+    connection.close()
+
+    if not document:
+
+        flash(
+            "Document not found or access denied."
+        )
+
+        return redirect(
+            url_for("documents")
+        )
+
+    stored_path = os.path.join(
+        UPLOAD_FOLDER,
+        document["stored_filename"]
+    )
+
+    if not os.path.exists(
+        stored_path
+    ):
+
+        flash(
+            "Encrypted file not found."
+        )
+
+        return redirect(
+            url_for("documents")
+        )
+
+    try:
+
+        with open(
+            stored_path,
+            "rb"
+        ) as encrypted_file:
+
+            encrypted_data = encrypted_file.read()
+
+        decrypted_data = fernet.decrypt(
+            encrypted_data
+        )
+
+        return send_file(
+            io.BytesIO(
+                decrypted_data
+            ),
+            mimetype="application/octet-stream",
+            as_attachment=False,
+            download_name=document[
+                "original_filename"
+            ]
+        )
+
+    except Exception:
+
+        flash(
+            "Unable to decrypt the document."
+        )
+
+        return redirect(
+            url_for("documents")
+        )
+
+
+# =========================================================
+# DELETE DOCUMENT
+# =========================================================
+
+@app.route(
+    "/delete-document/<filename>",
+    methods=["POST"]
+)
+@login_required
+def delete_document(filename):
+
+    connection = get_db_connection()
+
+    document = connection.execute(
+        """
+        SELECT *
+        FROM documents
+        WHERE stored_filename = ?
+        AND user_email = ?
+        """,
+        (
+            filename,
+            session["email"]
+        )
+    ).fetchone()
+
+    if not document:
+
+        connection.close()
+
+        flash(
+            "Document not found or access denied."
+        )
+
+        return redirect(
+            url_for("documents")
+        )
+
+    stored_path = os.path.join(
+        UPLOAD_FOLDER,
+        document["stored_filename"]
+    )
+
+    if os.path.exists(
+        stored_path
+    ):
+
+        os.remove(
+            stored_path
+        )
+
+    connection.execute(
+        """
+        DELETE FROM documents
+        WHERE stored_filename = ?
+        AND user_email = ?
+        """,
+        (
+            filename,
+            session["email"]
+        )
+    )
+
+    connection.commit()
+
+    connection.close()
+
+    send_email_notification(
+        session["email"],
+        "Digital Legacy Manager - Document Deleted",
+        f"""
+Hello {session["user"]},
+
+The following document was deleted:
+
+{document["name"]}
+
+Thank you,
+Digital Legacy Manager
+"""
+    )
+
+    flash(
+        "Document deleted successfully."
+    )
+
+    return redirect(
+        url_for("documents")
+    )
+
+
+# =========================================================
+# SETTINGS
+# =========================================================
+
+@app.route("/settings")
+@login_required
+def settings():
+
+    return render_template(
+        "settings.html"
+    )
+
+
+# =========================================================
+# LOGOUT
+# =========================================================
+
+@app.route("/logout")
+def logout():
+
+    session.clear()
+
+    flash(
+        "You have been logged out successfully."
+    )
+
+    return redirect(
+        url_for("login")
+    )
+
+
+# =========================================================
+# INITIALIZE DATABASE
+# =========================================================
+
+create_users_table()
+
+create_documents_table()
+
+
+# =========================================================
+# RUN
+# =========================================================
+
+if __name__ == "__main__":
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )
