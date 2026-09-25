@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Documents - Digital Legacy Manager</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<nav class="navbar">
+
+    <div class="logo">
+        🔐 Digital Legacy Manager
+    </div>
+
+    <a href="{{ url_for('dashboard') }}" class="nav-btn">
+        Dashboard
+    </a>
+
+</nav>
+
+
+<div class="dashboard">
+
+    <div class="welcome">
+
+        <h1>📄 My Documents</h1>
+
+        <p>
+            Add and organize important documents and their information.
+        </p>
+
+    </div>
+
+
+    <section class="dashboard-section">
+
+        <h2>➕ Add Document</h2>
+
+        <form action="{{ url_for('add_document') }}"
+              method="POST"
+              class="form-card">
+
+            <label>Document Name</label>
+
+            <input
+                type="text"
+                name="document_name"
+                placeholder="Example: Aadhaar Card"
+                required
+            >
+
+
+            <label>Document Type</label>
+
+            <select name="document_type" required>
+
+                <option value="">
+                    Select Document Type
+                </option>
+
+                <option value="Identity Document">
+                    Identity Document
+                </option>
+
+                <option value="Education">
+                    Education
+                </option>
+
+                <option value="Financial">
+                    Financial
+                </option>
+
+                <option value="Medical">
+                    Medical
+                </option>
+
+                <option value="Legal">
+                    Legal
+                </option>
+
+                <option value="Other">
+                    Other
+                </option>
+
+            </select>
+
+
+            <label>Description</label>
+
+            <textarea
+                name="document_description"
+                placeholder="Enter document information"
+            ></textarea>
+
+
+            <button type="submit" class="primary-btn">
+                Save Document
+            </button>
+
+        </form>
+
+    </section>
+
+
+    <section class="dashboard-section">
+
+        <h2>📋 Saved Documents</h2>
+
+        {% if documents %}
+
+        <div class="cards">
+
+            {% for document in documents %}
+
+            <div class="card">
+
+                <div class="card-icon">
+                    📄
+                </div>
+
+                <h3>{{ document.name }}</h3>
+
+                <p>
+                    <strong>Type:</strong>
+                    {{ document.type }}
+                </p>
+
+                {% if document.description %}
+
+                <p>
+                    {{ document.description }}
+                </p>
+
+                {% endif %}
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% else %}
+
+        <div class="empty">
+
+            No documents added yet.
+
+        </div>
+
+        {% endif %}
+
+    </section>
+
+</div>
+
+
+<footer>
+
+    © 2026 Digital Legacy Manager
+
+</footer>
+
+</body>
+</html>
