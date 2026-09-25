@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Emergency Contacts - Digital Legacy Manager</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<nav class="navbar">
+
+    <div class="logo">
+        🔐 Digital Legacy Manager
+    </div>
+
+    <a href="{{ url_for('dashboard') }}" class="nav-btn">
+        Dashboard
+    </a>
+
+</nav>
+
+
+<div class="dashboard">
+
+    <div class="welcome">
+
+        <h1>👨‍👩‍👧 Emergency Contacts</h1>
+
+        <p>
+            Add trusted people who can be contacted in an emergency.
+        </p>
+
+    </div>
+
+
+    <section class="dashboard-section">
+
+        <h2>➕ Add Emergency Contact</h2>
+
+        <form action="{{ url_for('add_contact') }}"
+              method="POST"
+              class="form-card">
+
+            <label>Contact Name</label>
+
+            <input
+                type="text"
+                name="contact_name"
+                placeholder="Example: Mother"
+                required
+            >
+
+
+            <label>Phone Number</label>
+
+            <input
+                type="tel"
+                name="phone"
+                placeholder="Enter phone number"
+                required
+            >
+
+
+            <label>Relation</label>
+
+            <input
+                type="text"
+                name="relation"
+                placeholder="Example: Mother"
+                required
+            >
+
+
+            <button type="submit" class="primary-btn">
+                Save Contact
+            </button>
+
+        </form>
+
+    </section>
+
+
+    <section class="dashboard-section">
+
+        <h2>📋 Saved Contacts</h2>
+
+        {% if contacts %}
+
+        <div class="cards">
+
+            {% for contact in contacts %}
+
+            <div class="card">
+
+                <div class="card-icon">
+                    👤
+                </div>
+
+                <h3>{{ contact.name }}</h3>
+
+                <p>
+                    <strong>Relation:</strong>
+                    {{ contact.relation }}
+                </p>
+
+                <p>
+                    📞 {{ contact.phone }}
+                </p>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% else %}
+
+        <div class="empty">
+
+            No emergency contacts added yet.
+
+        </div>
+
+        {% endif %}
+
+    </section>
+
+</div>
+
+
+<footer>
+
+    © 2026 Digital Legacy Manager
+
+</footer>
+
+</body>
+</html>

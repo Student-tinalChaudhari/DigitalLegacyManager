@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Edit Trusted Contact - Digital Legacy Manager</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #222;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            margin-top: 7px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 22px;
+            background: #16a34a;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            background: #15803d;
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <div class="card">
+
+        <h1>✏️ Edit Trusted Contact</h1>
+
+
+        <form method="POST">
+
+            <label>Contact Name</label>
+
+            <input
+                type="text"
+                name="contact_name"
+                value="{{ contact['contact_name'] }}"
+                required
+            >
+
+
+            <label>Email</label>
+
+            <input
+                type="email"
+                name="email"
+                value="{{ contact['email'] }}"
+                required
+            >
+
+
+            <label>Phone Number</label>
+
+            <input
+                type="text"
+                name="phone"
+                value="{{ contact['phone'] }}"
+                required
+            >
+
+
+            <label>Relationship</label>
+
+            <input
+                type="text"
+                name="relationship"
+                value="{{ contact['relationship'] }}"
+                required
+            >
+
+
+            <label>Permission</label>
+
+            <select name="permission" required>
+
+                <option value="View Only"
+                    {% if contact['permission'] == 'View Only' %}
+                    selected
+                    {% endif %}>
+                    View Only
+                </option>
+
+                <option value="Manage Assets"
+                    {% if contact['permission'] == 'Manage Assets' %}
+                    selected
+                    {% endif %}>
+                    Manage Assets
+                </option>
+
+                <option value="Full Access"
+                    {% if contact['permission'] == 'Full Access' %}
+                    selected
+                    {% endif %}>
+                    Full Access
+                </option>
+
+            </select>
+
+
+            <label>Notes</label>
+
+            <textarea
+                name="notes"
+            >{{ contact['notes'] }}</textarea>
+
+
+            <button type="submit">
+                💾 Update Trusted Contact
+            </button>
+
+        </form>
+
+
+        <a
+            class="back"
+            href="/trusted-contacts"
+        >
+            ← Back to Trusted Contacts
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Settings - Digital Legacy Manager</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<nav class="navbar">
+
+    <div class="logo">
+        🔐 Digital Legacy Manager
+    </div>
+
+    <a href="{{ url_for('dashboard') }}" class="nav-btn">
+        Dashboard
+    </a>
+
+</nav>
+
+
+<div class="dashboard">
+
+    <div class="welcome">
+
+        <h1>⚙️ Settings</h1>
+
+        <p>
+            Manage your Digital Legacy Manager account information.
+        </p>
+
+    </div>
+
+
+    <section class="dashboard-section">
+
+        <h2>👤 Profile Information</h2>
+
+        <div class="form-card">
+
+            <label>Name</label>
+
+            <input
+                type="text"
+                value="{{ user }}"
+                readonly
+            >
+
+
+            <label>Email Address</label>
+
+            <input
+                type="email"
+                value="{{ email }}"
+                readonly
+            >
+
+        </div>
+
+    </section>
+
+
+    <section class="dashboard-section">
+
+        <h2>🔐 Account</h2>
+
+        <p style="margin-bottom: 20px;">
+            You can safely leave your account using the logout option.
+        </p>
+
+        <a href="{{ url_for('logout') }}"
+           class="primary-btn">
+            Logout
+        </a>
+
+    </section>
+
+
+    <section class="dashboard-section">
+
+        <h2>ℹ️ About This Project</h2>
+
+        <p style="line-height: 1.7; color: #666;">
+
+            Digital Legacy Manager is a student project designed
+            to help users organize important digital information,
+            emergency contacts and document details in one place.
+
+        </p>
+
+    </section>
+
+</div>
+
+
+<footer>
+
+    © 2026 Digital Legacy Manager
+
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Edit Digital Asset - Digital Legacy Manager</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #222;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            margin-top: 7px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 22px;
+            background: #16a34a;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            background: #15803d;
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <div class="card">
+
+        <h1>✏️ Edit Digital Asset</h1>
+
+
+        <form method="POST">
+
+
+            <label>Asset Name</label>
+
+            <input
+                type="text"
+                name="asset_name"
+                value="{{ asset['asset_name'] }}"
+                required
+            >
+
+
+            <label>Category</label>
+
+            <select name="category" required>
+
+                <option value="Email"
+                    {% if asset['category'] == 'Email' %}selected{% endif %}>
+                    Email
+                </option>
+
+                <option value="Social Media"
+                    {% if asset['category'] == 'Social Media' %}selected{% endif %}>
+                    Social Media
+                </option>
+
+                <option value="Banking"
+                    {% if asset['category'] == 'Banking' %}selected{% endif %}>
+                    Banking
+                </option>
+
+                <option value="Cloud Storage"
+                    {% if asset['category'] == 'Cloud Storage' %}selected{% endif %}>
+                    Cloud Storage
+                </option>
+
+                <option value="Other"
+                    {% if asset['category'] == 'Other' %}selected{% endif %}>
+                    Other
+                </option>
+
+            </select>
+
+
+            <label>Description</label>
+
+            <textarea
+                name="description"
+            >{{ asset['description'] }}</textarea>
+
+
+            <label>Action / Instructions</label>
+
+            <textarea
+                name="action"
+            >{{ asset['action'] }}</textarea>
+
+
+            <button type="submit">
+                💾 Update Digital Asset
+            </button>
+
+
+        </form>
+
+
+        <a
+            class="back"
+            href="/assets"
+        >
+            ← Back to Digital Assets
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

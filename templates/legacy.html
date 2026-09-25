@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Digital Legacy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<nav class="navbar">
+    <div class="logo">🔐 Digital Legacy Manager</div>
+    <a href="{{ url_for('dashboard') }}" class="nav-btn">Dashboard</a>
+</nav>
+
+<div class="dashboard">
+
+    <div class="welcome">
+        <h1>📁 My Digital Legacy</h1>
+        <p>Add and manage your important digital information.</p>
+    </div>
+
+    <section class="dashboard-section">
+
+        <h2>➕ Add New Legacy</h2>
+
+        <form action="{{ url_for('add_legacy') }}" method="POST"
+              class="form-card">
+
+            <label>Title</label>
+
+            <input
+                type="text"
+                name="title"
+                placeholder="Example: Gmail Account"
+                required
+            >
+
+            <label>Category</label>
+
+            <select name="category" required>
+                <option value="">Select Category</option>
+                <option value="Email">Email</option>
+                <option value="Social Media">Social Media</option>
+                <option value="Banking">Banking</option>
+                <option value="Documents">Documents</option>
+                <option value="Other">Other</option>
+            </select>
+
+            <label>Description</label>
+
+            <textarea
+                name="description"
+                placeholder="Enter important information"
+                required
+            ></textarea>
+
+            <button type="submit" class="primary-btn">
+                Save Legacy
+            </button>
+
+        </form>
+
+    </section>
+
+
+    <section class="dashboard-section">
+
+        <h2>Saved Legacy Information</h2>
+
+        {% if items %}
+
+        <div class="cards">
+
+            {% for item in items %}
+
+            <div class="card">
+
+                <div class="card-icon">📄</div>
+
+                <h3>{{ item.title }}</h3>
+
+                <p>
+                    <strong>Category:</strong>
+                    {{ item.category }}
+                </p>
+
+                <p>{{ item.description }}</p>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% else %}
+
+        <div class="empty">
+            No legacy information added yet.
+        </div>
+
+        {% endif %}
+
+    </section>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Emergency Information - Digital Legacy Manager</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .navbar {
+            background: #0f172a;
+            color: white;
+            padding: 16px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .logo {
+            font-size: 21px;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 11px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .nav-links a:hover {
+            background: #2563eb;
+        }
+
+        .logout {
+            background: #dc2626 !important;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .page-header {
+            margin-bottom: 25px;
+        }
+
+        .page-header h1 {
+            color: #991b1b;
+            margin-bottom: 7px;
+        }
+
+        .page-header p {
+            color: #64748b;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .card h2 {
+            color: #991b1b;
+            margin-bottom: 18px;
+            font-size: 21px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 7px;
+            color: #334155;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 11px 13px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus {
+            border-color: #dc2626;
+        }
+
+        .btn {
+            display: inline-block;
+            border: none;
+            padding: 10px 17px;
+            border-radius: 7px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #b91c1c;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .search-box input {
+            flex: 1;
+        }
+
+        .emergency-item {
+            border: 1px solid #fecaca;
+            border-left: 5px solid #dc2626;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 15px;
+        }
+
+        .emergency-item h3 {
+            color: #991b1b;
+            margin-bottom: 12px;
+        }
+
+        .emergency-item p {
+            margin: 8px 0;
+            line-height: 1.6;
+            color: #475569;
+        }
+
+        .actions {
+            margin-top: 14px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .edit-btn {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .delete-btn {
+            background: #dc2626;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background: #d97706;
+        }
+
+        .delete-btn:hover {
+            background: #b91c1c;
+        }
+
+        .empty {
+            text-align: center;
+            color: #64748b;
+            padding: 20px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        @media (max-width: 700px) {
+
+            .navbar {
+                padding: 15px;
+            }
+
+            .nav-links {
+                width: 100%;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .container {
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+
+    <nav class="navbar">
+
+        <div class="logo">
+            🔐 Digital Legacy Manager
+        </div>
+
+        <div class="nav-links">
+
+            <a href="{{ url_for('dashboard') }}">
+                Dashboard
+            </a>
+
+            <a href="{{ url_for('assets') }}">
+                Assets
+            </a>
+
+            <a href="{{ url_for('trusted_contacts') }}">
+                Contacts
+            </a>
+
+            <a href="{{ url_for('legacy_instructions') }}">
+                Instructions
+            </a>
+
+            <a href="{{ url_for('emergency_information') }}">
+                Emergency
+            </a>
+
+            <a href="{{ url_for('logout') }}" class="logout">
+                Logout
+            </a>
+
+        </div>
+
+    </nav>
+
+
+    <!-- MAIN CONTENT -->
+
+    <div class="container">
+
+        <div class="page-header">
+
+            <h1>🚨 Emergency Information</h1>
+
+            <p>
+                Store important emergency contact and medical information.
+            </p>
+
+        </div>
+
+
+        <!-- ADD EMERGENCY INFORMATION -->
+
+        <div class="card">
+
+            <h2>➕ Add Emergency Information</h2>
+
+            <form method="POST">
+
+                <div class="form-group">
+
+                    <label for="emergency_name">
+                        Emergency Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="emergency_name"
+                        name="emergency_name"
+                        placeholder="Example: Emergency Contact"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="emergency_phone">
+                        Emergency Phone
+                    </label>
+
+                    <input
+                        type="text"
+                        id="emergency_phone"
+                        name="emergency_phone"
+                        placeholder="Example: 9876543210"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="hospital">
+                        Hospital
+                    </label>
+
+                    <input
+                        type="text"
+                        id="hospital"
+                        name="hospital"
+                        placeholder="Example: City Care Hospital"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="medical_notes">
+                        Medical Notes
+                    </label>
+
+                    <textarea
+                        id="medical_notes"
+                        name="medical_notes"
+                        placeholder="Enter important medical information"
+                    ></textarea>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="emergency_instructions">
+                        Emergency Instructions
+                    </label>
+
+                    <textarea
+                        id="emergency_instructions"
+                        name="emergency_instructions"
+                        placeholder="Enter instructions to follow during an emergency"
+                    ></textarea>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Add Emergency Information
+                </button>
+
+            </form>
+
+        </div>
+
+
+        <!-- SEARCH -->
+
+        <div class="card">
+
+            <h2>🔎 Search Emergency Information</h2>
+
+            <form
+                method="GET"
+                action="{{ url_for('emergency_information') }}"
+                class="search-box"
+            >
+
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ search }}"
+                    placeholder="Search emergency information"
+                >
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Search
+                </button>
+
+            </form>
+
+
+            <!-- EMERGENCY LIST -->
+
+            {% if emergencies %}
+
+                {% for emergency in emergencies %}
+
+                    <div class="emergency-item">
+
+                        <h3>
+                            🚨 {{ emergency["emergency_name"] }}
+                        </h3>
+
+                        <p>
+                            <strong>Emergency Phone:</strong>
+                            {{ emergency["emergency_phone"] or "Not provided" }}
+                        </p>
+
+                        <p>
+                            <strong>Hospital:</strong>
+                            {{ emergency["hospital"] or "Not provided" }}
+                        </p>
+
+                        <p>
+                            <strong>Medical Notes:</strong><br>
+                            {{ emergency["medical_notes"] or "No medical notes added." }}
+                        </p>
+
+                        <p>
+                            <strong>Emergency Instructions:</strong><br>
+                            {{ emergency["emergency_instructions"] or "No instructions added." }}
+                        </p>
+
+
+                        <div class="actions">
+
+                            <a
+                                href="{{ url_for('edit_emergency', id=emergency['id']) }}"
+                                class="btn edit-btn"
+                            >
+                                Edit
+                            </a>
+
+                            <a
+                                href="{{ url_for('delete_emergency', id=emergency['id']) }}"
+                                class="btn delete-btn"
+                                onclick="return confirm('Are you sure you want to delete this emergency information?');"
+                            >
+                                Delete
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div class="empty">
+                    No emergency information found.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <footer>
+        Digital Legacy Manager © 2026
+    </footer>
+
+</body>
+</html>
