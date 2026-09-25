@@ -17,8 +17,6 @@ import smtplib
 from email.message import EmailMessage
 from functools import wraps
 
-import pyotp
-
 from cryptography.fernet import Fernet
 
 from werkzeug.utils import secure_filename
@@ -65,7 +63,6 @@ KEY_FILE = "encryption.key"
 
 def load_encryption_key():
 
-    # First try environment variable
     environment_key = os.environ.get(
         "ENCRYPTION_KEY"
     )
@@ -73,14 +70,11 @@ def load_encryption_key():
     if environment_key:
 
         try:
-
             return environment_key.encode()
 
         except Exception:
-
             pass
 
-    # Otherwise use local key file
     if os.path.exists(KEY_FILE):
 
         with open(
@@ -97,10 +91,8 @@ def load_encryption_key():
             return key
 
         except Exception:
-
             pass
 
-    # Generate new key
     new_key = Fernet.generate_key()
 
     with open(
@@ -186,9 +178,6 @@ def send_email_notification(
     subject,
     message
 ):
-
-    # Email is optional.
-    # App will work even without SMTP settings.
 
     if not all([
         SMTP_HOST,
@@ -281,33 +270,6 @@ def create_users_table():
         """
     )
 
-    cursor.execute(
-        "PRAGMA table_info(users)"
-    )
-
-    columns = [
-        row["name"]
-        for row in cursor.fetchall()
-    ]
-
-    if "two_factor_secret" not in columns:
-
-        cursor.execute(
-            """
-            ALTER TABLE users
-            ADD COLUMN two_factor_secret TEXT
-            """
-        )
-
-    if "two_factor_enabled" not in columns:
-
-        cursor.execute(
-            """
-            ALTER TABLE users
-            ADD COLUMN two_factor_enabled INTEGER DEFAULT 0
-            """
-        )
-
     connection.commit()
 
     connection.close()
@@ -377,7 +339,6 @@ def allowed_file(filename):
 def login_required(view_function):
 
     @wraps(view_function)
-
     def wrapped_view(
         *args,
         **kwargs
@@ -387,21 +348,6 @@ def login_required(view_function):
 
             flash(
                 "Please login to continue."
-            )
-
-            return redirect(
-                url_for("login")
-            )
-
-        if not session.get(
-            "2fa_verified",
-            False
-        ):
-
-            session.clear()
-
-            flash(
-                "Please complete Two-Factor Authentication."
             )
 
             return redirect(
@@ -517,25 +463,20 @@ def register():
             password
         )
 
-        two_factor_secret = pyotp.random_base32()
-
         connection.execute(
             """
             INSERT INTO users
             (
                 name,
                 email,
-                password_hash,
-                two_factor_secret,
-                two_factor_enabled
+                password_hash
             )
-            VALUES (?, ?, ?, ?, 0)
+            VALUES (?, ?, ?)
             """,
             (
                 name,
                 email,
-                password_hash,
-                two_factor_secret
+                password_hash
             )
         )
 
@@ -550,8 +491,6 @@ def register():
 Hello {name},
 
 Your Digital Legacy Manager account has been created successfully.
-
-Two-Factor Authentication will be configured during your first login.
 
 Thank you,
 Digital Legacy Manager
@@ -631,263 +570,9 @@ def login():
 
         session.clear()
 
-        session["pending_2fa_email"] = email
-
-        session["pending_2fa_name"] = user["name"]
-
-        if user["two_factor_enabled"]:
-
-            return redirect(
-                url_for("verify_2fa")
-            )
-
-        return redirect(
-            url_for("setup_2fa")
-        )
-
-    return render_template(
-        "login.html"
-    )
-
-
-# =========================================================
-# SETUP 2FA
-# =========================================================
-
-@app.route(
-    "/setup-2fa",
-    methods=["GET", "POST"]
-)
-def setup_2fa():
-
-    email = session.get(
-        "pending_2fa_email"
-    )
-
-    if not email:
-
-        return redirect(
-            url_for("login")
-        )
-
-    connection = get_db_connection()
-
-    user = connection.execute(
-        """
-        SELECT *
-        FROM users
-        WHERE email = ?
-        """,
-        (email,)
-    ).fetchone()
-
-    if not user:
-
-        connection.close()
-
-        session.clear()
-
-        return redirect(
-            url_for("login")
-        )
-
-    secret = user["two_factor_secret"]
-
-    if not secret:
-
-        secret = pyotp.random_base32()
-
-        connection.execute(
-            """
-            UPDATE users
-            SET two_factor_secret = ?
-            WHERE email = ?
-            """,
-            (
-                secret,
-                email
-            )
-        )
-
-        connection.commit()
-
-    connection.close()
-
-    if request.method == "POST":
-
-        otp = request.form.get(
-            "otp",
-            ""
-        ).strip()
-
-        if not otp.isdigit() or len(otp) != 6:
-
-            flash(
-                "Please enter a valid 6-digit code."
-            )
-
-            return redirect(
-                url_for("setup_2fa")
-            )
-
-        if not pyotp.TOTP(
-            secret
-        ).verify(
-            otp,
-            valid_window=1
-        ):
-
-            flash(
-                "Invalid authentication code."
-            )
-
-            return redirect(
-                url_for("setup_2fa")
-            )
-
-        connection = get_db_connection()
-
-        connection.execute(
-            """
-            UPDATE users
-            SET two_factor_enabled = 1
-            WHERE email = ?
-            """,
-            (email,)
-        )
-
-        connection.commit()
-
-        connection.close()
-
-        name = session.get(
-            "pending_2fa_name",
-            "User"
-        )
-
-        session.clear()
-
-        session["user"] = name
-
-        session["email"] = email
-
-        session["2fa_verified"] = True
-
-        send_email_notification(
-            email,
-            "Digital Legacy Manager - 2FA Enabled",
-            f"""
-Hello {name},
-
-Two-Factor Authentication has been successfully enabled.
-
-Thank you,
-Digital Legacy Manager
-"""
-        )
-
-        flash(
-            "Two-Factor Authentication enabled successfully."
-        )
-
-        return redirect(
-            url_for("dashboard")
-        )
-
-    otp_uri = pyotp.TOTP(
-        secret
-    ).provisioning_uri(
-        name=email,
-        issuer_name="Digital Legacy Manager"
-    )
-
-    return render_template(
-        "setup_2fa.html",
-        secret=secret,
-        otp_uri=otp_uri
-    )
-
-
-# =========================================================
-# VERIFY 2FA
-# =========================================================
-
-@app.route(
-    "/verify-2fa",
-    methods=["GET", "POST"]
-)
-def verify_2fa():
-
-    email = session.get(
-        "pending_2fa_email"
-    )
-
-    if not email:
-
-        return redirect(
-            url_for("login")
-        )
-
-    connection = get_db_connection()
-
-    user = connection.execute(
-        """
-        SELECT *
-        FROM users
-        WHERE email = ?
-        """,
-        (email,)
-    ).fetchone()
-
-    connection.close()
-
-    if not user:
-
-        session.clear()
-
-        return redirect(
-            url_for("login")
-        )
-
-    if request.method == "POST":
-
-        otp = request.form.get(
-            "otp",
-            ""
-        ).strip()
-
-        if not otp.isdigit() or len(otp) != 6:
-
-            flash(
-                "Please enter a valid 6-digit code."
-            )
-
-            return redirect(
-                url_for("verify_2fa")
-            )
-
-        if not pyotp.TOTP(
-            user["two_factor_secret"]
-        ).verify(
-            otp,
-            valid_window=1
-        ):
-
-            flash(
-                "Invalid authentication code."
-            )
-
-            return redirect(
-                url_for("verify_2fa")
-            )
-
-        session.clear()
-
         session["user"] = user["name"]
 
         session["email"] = user["email"]
-
-        session["2fa_verified"] = True
 
         send_email_notification(
             user["email"],
@@ -897,11 +582,13 @@ Hello {user["name"]},
 
 A successful login was completed on your Digital Legacy Manager account.
 
-If you did not perform this login, please secure your account.
-
 Thank you,
 Digital Legacy Manager
 """
+        )
+
+        flash(
+            "Login successful."
         )
 
         return redirect(
@@ -909,7 +596,7 @@ Digital Legacy Manager
         )
 
     return render_template(
-        "verify_2fa.html"
+        "login.html"
     )
 
 
