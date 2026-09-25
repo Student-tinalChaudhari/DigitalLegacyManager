@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Login - Digital Legacy Manager
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<nav class="navbar">
+
+    <div class="logo">
+        🔐 Digital Legacy Manager
+    </div>
+
+</nav>
+
+
+<div class="dashboard">
+
+    <div class="form-card">
+
+        <h1>
+            🔐 Login
+        </h1>
+
+
+        {% with messages = get_flashed_messages() %}
+
+            {% if messages %}
+
+                {% for message in messages %}
+
+                    <div class="empty">
+                        {{ message }}
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+        {% endwith %}
+
+
+        <form
+            action="{{ url_for('login') }}"
+            method="POST"
+        >
+
+            <label>
+                Email Address
+            </label>
+
+            <input
+                type="email"
+                name="email"
+                placeholder="Enter your email"
+                required
+            >
+
+
+            <label>
+                Password
+            </label>
+
+            <input
+                type="password"
+                name="password"
+                placeholder="Enter your password"
+                required
+            >
+
+
+            <button
+                type="submit"
+                class="primary-btn"
+            >
+                🔐 Login
+            </button>
+
+        </form>
+
+
+        <p style="margin-top:20px;">
+
+            Don't have an account?
+
+            <a href="{{ url_for('register') }}">
+                Create Account
+            </a>
+
+        </p>
+
+    </div>
+
+</div>
+
+
+<footer>
+    © 2026 Digital Legacy Manager
+</footer>
+
+</body>
+
+</html>

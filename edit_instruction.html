@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Edit Legacy Instruction - Digital Legacy Manager</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #222;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            margin-top: 7px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 140px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 22px;
+            background: #16a34a;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            background: #15803d;
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <div class="card">
+
+        <h1>✏️ Edit Legacy Instruction</h1>
+
+
+        <form method="POST">
+
+            <label>Instruction Title</label>
+
+            <input
+                type="text"
+                name="title"
+                value="{{ instruction['title'] }}"
+                required
+            >
+
+
+            <label>Instruction</label>
+
+            <textarea
+                name="instruction"
+                required
+            >{{ instruction['instruction'] }}</textarea>
+
+
+            <label>Priority</label>
+
+            <select name="priority" required>
+
+                <option value="Low"
+                    {% if instruction['priority'] == 'Low' %}
+                    selected
+                    {% endif %}>
+                    Low
+                </option>
+
+                <option value="Medium"
+                    {% if instruction['priority'] == 'Medium' %}
+                    selected
+                    {% endif %}>
+                    Medium
+                </option>
+
+                <option value="High"
+                    {% if instruction['priority'] == 'High' %}
+                    selected
+                    {% endif %}>
+                    High
+                </option>
+
+            </select>
+
+
+            <button type="submit">
+                💾 Update Legacy Instruction
+            </button>
+
+        </form>
+
+
+        <a
+            class="back"
+            href="/legacy-instructions"
+        >
+            ← Back to Legacy Instructions
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

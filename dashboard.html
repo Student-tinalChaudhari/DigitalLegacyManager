@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard - Digital Legacy Manager</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<nav class="navbar">
+
+    <div class="logo">
+        🔐 Digital Legacy Manager
+    </div>
+
+    <a href="{{ url_for('logout') }}" class="nav-btn">
+        Logout
+    </a>
+
+</nav>
+
+
+<div class="dashboard">
+
+    <div class="welcome">
+
+        <h1>Hello, {{ user }} 👋</h1>
+
+        <p>
+            Welcome to your Digital Legacy Manager dashboard.
+        </p>
+
+    </div>
+
+
+    <!-- Navigation Modules -->
+
+    <section class="dashboard-section">
+
+        <h2>📌 Manage Your Digital Legacy</h2>
+
+        <div class="cards">
+
+            <div class="card">
+
+                <div class="card-icon">📁</div>
+
+                <h3>My Digital Legacy</h3>
+
+                <p>
+                    Add and manage important digital information.
+                </p>
+
+                <a href="{{ url_for('legacy') }}"
+                   class="primary-btn">
+                    Open Legacy
+                </a>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-icon">👨‍👩‍👧</div>
+
+                <h3>Emergency Contacts</h3>
+
+                <p>
+                    Manage trusted emergency contacts.
+                </p>
+
+                <a href="{{ url_for('contacts') }}"
+                   class="primary-btn">
+                    Open Contacts
+                </a>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-icon">📄</div>
+
+                <h3>Documents</h3>
+
+                <p>
+                    Organize important document information.
+                </p>
+
+                <a href="{{ url_for('documents_page') }}"
+                   class="primary-btn">
+                    Open Documents
+                </a>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-icon">⚙️</div>
+
+                <h3>Settings</h3>
+
+                <p>
+                    View your account information and settings.
+                </p>
+
+                <a href="{{ url_for('settings') }}"
+                   class="primary-btn">
+                    Open Settings
+                </a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- Summary -->
+
+    <section class="dashboard-section">
+
+        <h2>📊 Your Summary</h2>
+
+        <div class="cards">
+
+            <div class="card">
+
+                <div class="card-icon">📁</div>
+
+                <h3>{{ items|length }}</h3>
+
+                <p>Digital Legacy Items</p>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-icon">👤</div>
+
+                <h3>{{ contacts|length }}</h3>
+
+                <p>Emergency Contacts</p>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-icon">📄</div>
+
+                <h3>{{ documents|length }}</h3>
+
+                <p>Documents</p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<footer>
+
+    © 2026 Digital Legacy Manager
+
+</footer>
+
+</body>
+</html>
