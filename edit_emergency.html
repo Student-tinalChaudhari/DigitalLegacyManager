@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Edit Emergency Information</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin-top: 7px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 22px;
+            background: #16a34a;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="card">
+
+        <h1>✏️ Edit Emergency Information</h1>
+
+        <form method="POST">
+
+            <label>Emergency Contact Name</label>
+
+            <input
+                type="text"
+                name="emergency_name"
+                value="{{ emergency['emergency_name'] }}"
+                required
+            >
+
+            <label>Emergency Phone Number</label>
+
+            <input
+                type="text"
+                name="emergency_phone"
+                value="{{ emergency['emergency_phone'] }}"
+                required
+            >
+
+            <label>Preferred Hospital</label>
+
+            <input
+                type="text"
+                name="hospital"
+                value="{{ emergency['hospital'] or '' }}"
+            >
+
+            <label>Medical Notes</label>
+
+            <textarea name="medical_notes">{{ emergency['medical_notes'] or '' }}</textarea>
+
+            <label>Emergency Instructions</label>
+
+            <textarea name="emergency_instructions">{{ emergency['emergency_instructions'] or '' }}</textarea>
+
+            <button type="submit">
+                💾 Update Emergency Information
+            </button>
+
+        </form>
+
+        <a
+            class="back"
+            href="/emergency-information"
+        >
+            ← Back to Emergency Information
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

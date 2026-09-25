@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Digital Legacy Manager - Dashboard</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            color: #222;
+        }
+
+        /* NAVBAR */
+
+        .navbar {
+            background: #172554;
+            color: white;
+            padding: 18px 40px;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .logout {
+            background: #ef4444;
+            color: white;
+            text-decoration: none;
+
+            padding: 9px 18px;
+            border-radius: 6px;
+
+            font-size: 14px;
+        }
+
+        .logout:hover {
+            background: #dc2626;
+        }
+
+        /* MAIN */
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 35px 20px;
+        }
+
+        .welcome {
+            margin-bottom: 30px;
+        }
+
+        .welcome h1 {
+            font-size: 30px;
+            color: #172554;
+            margin-bottom: 8px;
+        }
+
+        .welcome p {
+            color: #64748b;
+            font-size: 16px;
+        }
+
+        /* CARDS */
+
+        .cards {
+            display: grid;
+
+            grid-template-columns:
+                repeat(auto-fit, minmax(230px, 1fr));
+
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+
+            padding: 25px;
+
+            border-radius: 12px;
+
+            box-shadow:
+                0 4px 15px rgba(0, 0, 0, 0.08);
+
+            transition: 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .icon {
+            font-size: 35px;
+            margin-bottom: 15px;
+        }
+
+        .card h2 {
+            font-size: 20px;
+            color: #172554;
+            margin-bottom: 8px;
+        }
+
+        .card p {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 18px;
+        }
+
+        .count {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2563eb;
+
+            margin-bottom: 15px;
+        }
+
+        .button {
+            display: inline-block;
+
+            background: #2563eb;
+            color: white;
+
+            text-decoration: none;
+
+            padding: 9px 16px;
+
+            border-radius: 6px;
+
+            font-size: 14px;
+        }
+
+        .button:hover {
+            background: #1d4ed8;
+        }
+
+        /* FOOTER */
+
+        .footer {
+            text-align: center;
+
+            margin-top: 50px;
+
+            padding: 20px;
+
+            color: #64748b;
+
+            font-size: 13px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+    <!-- NAVBAR -->
+
+    <div class="navbar">
+
+        <div class="logo">
+            🔐 Digital Legacy Manager
+        </div>
+
+        <a href="{{ url_for('logout') }}" class="logout">
+            Logout
+        </a>
+
+    </div>
+
+
+    <!-- MAIN CONTENT -->
+
+    <div class="container">
+
+        <div class="welcome">
+
+            <h1>
+                Welcome, {{ user_name }}! 👋
+            </h1>
+
+            <p>
+                Manage and organize your important digital legacy information securely.
+            </p>
+
+        </div>
+
+
+        <!-- DASHBOARD CARDS -->
+
+        <div class="cards">
+
+
+            <!-- DIGITAL ASSETS -->
+
+            <div class="card">
+
+                <div class="icon">
+                    💻
+                </div>
+
+                <h2>
+                    Digital Assets
+                </h2>
+
+                <p>
+                    Manage your important digital accounts and assets.
+                </p>
+
+                <div class="count">
+                    {{ assets_count }}
+                </div>
+
+                <a href="{{ url_for('assets') }}" class="button">
+                    Manage Assets
+                </a>
+
+            </div>
+
+
+            <!-- TRUSTED CONTACTS -->
+
+            <div class="card">
+
+                <div class="icon">
+                    👥
+                </div>
+
+                <h2>
+                    Trusted Contacts
+                </h2>
+
+                <p>
+                    Manage people you trust with your legacy information.
+                </p>
+
+                <div class="count">
+                    {{ contacts_count }}
+                </div>
+
+                <a href="{{ url_for('trusted_contacts') }}" class="button">
+                    Manage Contacts
+                </a>
+
+            </div>
+
+
+            <!-- LEGACY INSTRUCTIONS -->
+
+            <div class="card">
+
+                <div class="icon">
+                    📜
+                </div>
+
+                <h2>
+                    Legacy Instructions
+                </h2>
+
+                <p>
+                    Store instructions about what should happen to your digital assets.
+                </p>
+
+                <div class="count">
+                    {{ instructions_count }}
+                </div>
+
+                <a href="{{ url_for('legacy_instructions') }}" class="button">
+                    View Instructions
+                </a>
+
+            </div>
+
+
+            <!-- EMERGENCY INFORMATION -->
+
+            <div class="card">
+
+                <div class="icon">
+                    🚨
+                </div>
+
+                <h2>
+                    Emergency Information
+                </h2>
+
+                <p>
+                    Store important emergency contacts and medical information.
+                </p>
+
+                <div class="count">
+                    {{ emergency_count }}
+                </div>
+
+                <a href="{{ url_for('emergency_information') }}" class="button">
+                    View Information
+                </a>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- FOOTER -->
+
+        <div class="footer">
+
+            Digital Legacy Manager © 2026
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>
