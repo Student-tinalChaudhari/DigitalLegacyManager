@@ -1,240 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Register - Digital Legacy Manager</title>
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Register - Digital Legacy Manager
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
 
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-        }
 
-        body {
-            min-height: 100vh;
-            background: linear-gradient(135deg, #0f172a, #1e3a8a);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+        .register-card {
 
-        .register-container {
-            width: 100%;
-            max-width: 450px;
-            background: white;
-            padding: 35px;
+            max-width: 500px;
+
+            margin: 50px auto;
+
+            background: #ffffff;
+
+            padding: 30px;
+
             border-radius: 15px;
-            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+
+            box-shadow:
+                0 5px 20px
+                rgba(0, 0, 0, 0.10);
+
         }
 
-        .logo {
+
+        .register-card h1 {
+
             text-align: center;
-            font-size: 42px;
+
             margin-bottom: 10px;
+
         }
 
-        h1 {
+
+        .register-card p {
+
             text-align: center;
-            color: #1e3a8a;
-            font-size: 27px;
-            margin-bottom: 8px;
+
+            color: #666;
+
+            margin-bottom: 25px;
+
         }
 
-        .subtitle {
-            text-align: center;
-            color: #64748b;
-            font-size: 14px;
-            margin-bottom: 28px;
-        }
 
-        .form-group {
-            margin-bottom: 18px;
-        }
+        .register-card label {
 
-        label {
             display: block;
+
+            margin-top: 15px;
+
             margin-bottom: 7px;
-            font-weight: bold;
-            color: #334155;
-            font-size: 14px;
+
+            font-weight: 600;
+
         }
 
-        input {
+
+        .register-card input {
+
             width: 100%;
-            padding: 12px 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
+
+            padding: 12px;
+
+            box-sizing: border-box;
+
+            border: 1px solid #ccc;
+
+            border-radius: 7px;
+
             font-size: 15px;
-            outline: none;
+
         }
 
-        input:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
-        }
 
-        .password-note {
-            font-size: 12px;
-            color: #64748b;
-            margin-top: 5px;
-        }
+        .register-button {
 
-        button {
             width: 100%;
-            padding: 13px;
-            background: #2563eb;
-            color: white;
+
+            margin-top: 25px;
+
+            padding: 12px;
+
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+
+            border-radius: 7px;
+
             cursor: pointer;
-            margin-top: 5px;
+
+            font-size: 16px;
+
+            font-weight: 600;
+
         }
 
-        button:hover {
-            background: #1d4ed8;
-        }
 
         .login-link {
+
             text-align: center;
-            margin-top: 22px;
-            font-size: 14px;
-            color: #64748b;
+
+            margin-top: 20px;
+
         }
+
 
         .login-link a {
-            color: #2563eb;
+
             text-decoration: none;
-            font-weight: bold;
+
+            font-weight: 600;
+
         }
 
-        .login-link a:hover {
-            text-decoration: underline;
+
+        .message {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+
+            padding: 12px;
+
+            border-radius: 7px;
+
+            margin-bottom: 15px;
+
         }
 
-        .footer {
-            text-align: center;
-            margin-top: 22px;
-            font-size: 12px;
-            color: #94a3b8;
-        }
-
-        @media (max-width: 500px) {
-            .register-container {
-                padding: 25px 20px;
-            }
-
-            h1 {
-                font-size: 24px;
-            }
-        }
     </style>
+
 </head>
+
 
 <body>
 
-    <div class="register-container">
 
-        <div class="logo">🔐</div>
+<nav class="navbar">
 
-        <h1>Create Account</h1>
+    <div class="logo">
+        🔐 Digital Legacy Manager
+    </div>
 
-        <p class="subtitle">
-            Register for Digital Legacy Manager
-        </p>
+</nav>
 
-        <form method="POST" onsubmit="return validateRegisterForm()">
 
-            <div class="form-group">
-                <label for="name">Full Name</label>
+<div class="register-card">
 
-                <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    placeholder="Enter your full name"
-                    required
-                >
-            </div>
+    <h1>
+        📝 Create Account
+    </h1>
 
-            <div class="form-group">
-                <label for="email">Email Address</label>
+    <p>
+        Create a secure Digital Legacy Manager account.
+    </p>
 
-                <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="Enter your email"
-                    required
-                >
-            </div>
 
-            <div class="form-group">
-                <label for="password">Password</label>
+    {% with messages = get_flashed_messages() %}
 
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    placeholder="Create a password"
-                    minlength="6"
-                    required
-                >
+        {% if messages %}
 
-                <p class="password-note">
-                    Password must contain at least 6 characters.
-                </p>
-            </div>
+            {% for message in messages %}
 
-            <button type="submit">
-                Create Account
-            </button>
+                <div class="message">
+                    {{ message }}
+                </div>
 
-        </form>
+            {% endfor %}
 
-        <div class="login-link">
-            Already have an account?
-            <a href="{{ url_for('login') }}">Login here</a>
-        </div>
+        {% endif %}
 
-        <div class="footer">
-            Digital Legacy Manager © 2026
-        </div>
+    {% endwith %}
+
+
+    <form
+        action="{{ url_for('register') }}"
+        method="POST"
+    >
+
+
+        <label for="name">
+            Full Name
+        </label>
+
+        <input
+            type="text"
+            id="name"
+            name="name"
+            placeholder="Enter your full name"
+            required
+        >
+
+
+        <label for="email">
+            Email Address
+        </label>
+
+        <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="Enter your email"
+            required
+        >
+
+
+        <label for="password">
+            Password
+        </label>
+
+        <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Create a password"
+            minlength="8"
+            required
+        >
+
+
+        <label for="confirm_password">
+            Confirm Password
+        </label>
+
+        <input
+            type="password"
+            id="confirm_password"
+            name="confirm_password"
+            placeholder="Confirm your password"
+            minlength="8"
+            required
+        >
+
+
+        <button
+            type="submit"
+            class="primary-btn register-button"
+        >
+            Create Account
+        </button>
+
+    </form>
+
+
+    <div class="login-link">
+
+        Already have an account?
+
+        <a href="{{ url_for('login') }}">
+            Login
+        </a>
 
     </div>
 
+</div>
 
-    <script>
-        function validateRegisterForm() {
 
-            const name = document.getElementById("name").value.trim();
-            const email = document.getElementById("email").value.trim();
-            const password = document.getElementById("password").value;
+<footer>
+    © 2026 Digital Legacy Manager
+</footer>
 
-            if (name === "") {
-                alert("Please enter your full name.");
-                return false;
-            }
-
-            if (email === "") {
-                alert("Please enter your email address.");
-                return false;
-            }
-
-            if (password.length < 6) {
-                alert("Password must contain at least 6 characters.");
-                return false;
-            }
-
-            return true;
-        }
-    </script>
 
 </body>
+
 </html>
