@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
     <title>Settings - Digital Legacy Manager</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
+
 </head>
 
 <body>
@@ -18,7 +23,8 @@
         🔐 Digital Legacy Manager
     </div>
 
-    <a href="{{ url_for('dashboard') }}" class="nav-btn">
+    <a href="{{ url_for('dashboard') }}"
+       class="nav-btn">
         Dashboard
     </a>
 
@@ -29,10 +35,10 @@
 
     <div class="welcome">
 
-        <h1>⚙️ Settings</h1>
+        <h1>⚙️ Account Settings</h1>
 
         <p>
-            Manage your Digital Legacy Manager account information.
+            View your Digital Legacy Manager account information.
         </p>
 
     </div>
@@ -40,26 +46,21 @@
 
     <section class="dashboard-section">
 
-        <h2>👤 Profile Information</h2>
+        <div class="card">
 
-        <div class="form-card">
+            <div class="card-icon">👤</div>
 
-            <label>Name</label>
+            <h3>Account Information</h3>
 
-            <input
-                type="text"
-                value="{{ user }}"
-                readonly
-            >
+            <p>
+                <strong>Name:</strong>
+                {{ user["name"] }}
+            </p>
 
-
-            <label>Email Address</label>
-
-            <input
-                type="email"
-                value="{{ email }}"
-                readonly
-            >
+            <p>
+                <strong>Email:</strong>
+                {{ user["email"] }}
+            </p>
 
         </div>
 
@@ -68,31 +69,31 @@
 
     <section class="dashboard-section">
 
-        <h2>🔐 Account</h2>
+        <div class="card">
 
-        <p style="margin-bottom: 20px;">
-            You can safely leave your account using the logout option.
-        </p>
+            <div class="card-icon">🔐</div>
 
-        <a href="{{ url_for('logout') }}"
-           class="primary-btn">
-            Logout
-        </a>
+            <h3>Security</h3>
+
+            <p>
+                Your account uses password-based authentication.
+            </p>
+
+            <p>
+                Two-factor authentication is not enabled.
+            </p>
+
+        </div>
 
     </section>
 
 
     <section class="dashboard-section">
 
-        <h2>ℹ️ About This Project</h2>
-
-        <p style="line-height: 1.7; color: #666;">
-
-            Digital Legacy Manager is a student project designed
-            to help users organize important digital information,
-            emergency contacts and document details in one place.
-
-        </p>
+        <a href="{{ url_for('dashboard') }}"
+           class="primary-btn">
+            ← Back to Dashboard
+        </a>
 
     </section>
 
@@ -106,4 +107,5 @@
 </footer>
 
 </body>
+
 </html>
