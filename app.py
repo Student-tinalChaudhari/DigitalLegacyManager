@@ -1,3 +1,7 @@
+import os
+import sqlite3
+from functools import wraps
+
 from flask import (
     Flask,
     render_template,
@@ -5,331 +9,127 @@ from flask import (
     redirect,
     url_for,
     session,
-    send_file,
-    flash
+    flash,
+    send_file
 )
 
-import os
-import uuid
-import sqlite3
-import io
-import smtplib
-from email.message import EmailMessage
-from functools import wraps
-
+from werkzeug.security import generate_password_hash, check_password_hash
 from cryptography.fernet import Fernet
-
-from werkzeug.utils import secure_filename
-from werkzeug.security import (
-    generate_password_hash,
-    check_password_hash
-)
 
 
 # =========================================================
-# APP
+# APP CONFIGURATION
 # =========================================================
 
 app = Flask(__name__)
 
 app.secret_key = os.environ.get(
     "SECRET_KEY",
-    "digital-legacy-manager-local-demo-secret-2026"
+    "digital-legacy-manager-secret-key-change-in-render"
 )
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE = os.path.join(BASE_DIR, "database.db")
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 
-# =========================================================
-# DATABASE
-# =========================================================
-
-DATABASE = "database.db"
-
-
-def get_db_connection():
-
-    connection = sqlite3.connect(DATABASE)
-
-    connection.row_factory = sqlite3.Row
-
-    return connection
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 # =========================================================
 # ENCRYPTION KEY
 # =========================================================
 
-KEY_FILE = "encryption.key"
+def get_encryption_key():
+    key = os.environ.get("ENCRYPTION_KEY")
 
+    if key:
+        return key.encode()
 
-def load_encryption_key():
+    key_file = os.path.join(BASE_DIR, "encryption.key")
 
-    environment_key = os.environ.get(
-        "ENCRYPTION_KEY"
-    )
-
-    if environment_key:
-
-        try:
-            return environment_key.encode()
-
-        except Exception:
-            pass
-
-    if os.path.exists(KEY_FILE):
-
-        with open(
-            KEY_FILE,
-            "rb"
-        ) as key_file:
-
-            key = key_file.read()
-
-        try:
-
-            Fernet(key)
-
-            return key
-
-        except Exception:
-            pass
+    if os.path.exists(key_file):
+        with open(key_file, "rb") as f:
+            return f.read()
 
     new_key = Fernet.generate_key()
 
-    with open(
-        KEY_FILE,
-        "wb"
-    ) as key_file:
-
-        key_file.write(new_key)
+    try:
+        with open(key_file, "wb") as f:
+            f.write(new_key)
+    except Exception:
+        pass
 
     return new_key
 
 
-ENCRYPTION_KEY = load_encryption_key()
-
-fernet = Fernet(
-    ENCRYPTION_KEY
-)
+ENCRYPTION_KEY = get_encryption_key()
+fernet = Fernet(ENCRYPTION_KEY)
 
 
 # =========================================================
-# UPLOAD SETTINGS
+# DATABASE
 # =========================================================
 
-UPLOAD_FOLDER = "uploads"
-
-ALLOWED_EXTENSIONS = {
-    "pdf",
-    "jpg",
-    "jpeg",
-    "png"
-}
-
-MAX_FILE_SIZE = 10 * 1024 * 1024
-
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
-
-os.makedirs(
-    UPLOAD_FOLDER,
-    exist_ok=True
-)
+def get_db():
+    connection = sqlite3.connect(DATABASE)
+    connection.row_factory = sqlite3.Row
+    return connection
 
 
-# =========================================================
-# TEMPORARY DATA
-# =========================================================
+def create_tables():
 
-legacy_items = []
+    db = get_db()
 
-emergency_contacts = []
-
-
-# =========================================================
-# EMAIL SETTINGS
-# =========================================================
-
-SMTP_HOST = os.environ.get(
-    "SMTP_HOST"
-)
-
-SMTP_PORT = os.environ.get(
-    "SMTP_PORT",
-    "587"
-)
-
-SMTP_USERNAME = os.environ.get(
-    "SMTP_USERNAME"
-)
-
-SMTP_PASSWORD = os.environ.get(
-    "SMTP_PASSWORD"
-)
-
-NOTIFICATION_FROM = os.environ.get(
-    "NOTIFICATION_FROM",
-    SMTP_USERNAME
-)
-
-
-def send_email_notification(
-    recipient,
-    subject,
-    message
-):
-
-    if not all([
-        SMTP_HOST,
-        SMTP_USERNAME,
-        SMTP_PASSWORD,
-        recipient
-    ]):
-
-        print(
-            "Email notification skipped: SMTP not configured."
-        )
-
-        return False
-
-    try:
-
-        email = EmailMessage()
-
-        email["From"] = NOTIFICATION_FROM
-
-        email["To"] = recipient
-
-        email["Subject"] = subject
-
-        email.set_content(
-            message
-        )
-
-        with smtplib.SMTP(
-            SMTP_HOST,
-            int(SMTP_PORT)
-        ) as server:
-
-            server.starttls()
-
-            server.login(
-                SMTP_USERNAME,
-                SMTP_PASSWORD
-            )
-
-            server.send_message(
-                email
-            )
-
-        print(
-            "Email notification sent."
-        )
-
-        return True
-
-    except Exception as error:
-
-        print(
-            "Email notification failed:",
-            error
-        )
-
-        return False
-
-
-# =========================================================
-# USERS TABLE
-# =========================================================
-
-def create_users_table():
-
-    connection = get_db_connection()
-
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
+    # Users
+    db.execute("""
         CREATE TABLE IF NOT EXISTS users (
-
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-
             name TEXT NOT NULL,
-
             email TEXT UNIQUE NOT NULL,
-
-            password_hash TEXT NOT NULL,
-
-            two_factor_secret TEXT,
-
-            two_factor_enabled INTEGER DEFAULT 0,
-
-            created_at TIMESTAMP
-                DEFAULT CURRENT_TIMESTAMP
+            password_hash TEXT NOT NULL
         )
-        """
-    )
+    """)
 
-    connection.commit()
-
-    connection.close()
-
-
-# =========================================================
-# DOCUMENTS TABLE
-# =========================================================
-
-def create_documents_table():
-
-    connection = get_db_connection()
-
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS documents (
-
+    # Digital Legacy
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS legacy_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-            user_email TEXT NOT NULL,
-
-            name TEXT NOT NULL,
-
-            document_type TEXT NOT NULL,
-
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
             description TEXT,
-
-            original_filename TEXT NOT NULL,
-
-            stored_filename TEXT NOT NULL,
-
-            created_at TIMESTAMP
-                DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
-    )
+    """)
 
-    connection.commit()
+    # Contacts
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS contacts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            email TEXT,
+            phone TEXT,
+            relationship TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
-    connection.close()
+    # Documents
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            original_filename TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    db.commit()
+    db.close()
 
 
-# =========================================================
-# FILE VALIDATION
-# =========================================================
-
-def allowed_file(filename):
-
-    return (
-        "."
-        in filename
-        and
-        filename.rsplit(
-            ".",
-            1
-        )[1].lower()
-        in ALLOWED_EXTENSIONS
-    )
+create_tables()
 
 
 # =========================================================
@@ -339,25 +139,13 @@ def allowed_file(filename):
 def login_required(view_function):
 
     @wraps(view_function)
-    def wrapped_view(
-        *args,
-        **kwargs
-    ):
+    def wrapped_view(*args, **kwargs):
 
         if "user" not in session:
+            flash("Please login to continue.")
+            return redirect(url_for("login"))
 
-            flash(
-                "Please login to continue."
-            )
-
-            return redirect(
-                url_for("login")
-            )
-
-        return view_function(
-            *args,
-            **kwargs
-        )
+        return view_function(*args, **kwargs)
 
     return wrapped_view
 
@@ -369,172 +157,81 @@ def login_required(view_function):
 @app.route("/")
 def index():
 
-    return render_template(
-        "index.html"
-    )
+    if "user" in session:
+        return redirect(url_for("dashboard"))
+
+    return render_template("index.html")
 
 
 # =========================================================
 # REGISTER
 # =========================================================
 
-@app.route(
-    "/register",
-    methods=["GET", "POST"]
-)
+@app.route("/register", methods=["GET", "POST"])
 def register():
 
     if request.method == "POST":
 
-        name = request.form.get(
-            "name",
-            ""
-        ).strip()
-
-        email = request.form.get(
-            "email",
-            ""
-        ).strip().lower()
-
-        password = request.form.get(
-            "password",
-            ""
-        )
-
-        confirm_password = request.form.get(
-            "confirm_password",
-            ""
-        )
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
 
         if not name or not email or not password:
-
-            flash(
-                "Please fill all required fields."
-            )
-
-            return redirect(
-                url_for("register")
-            )
-
-        if len(password) < 8:
-
-            flash(
-                "Password must contain at least 8 characters."
-            )
-
-            return redirect(
-                url_for("register")
-            )
+            flash("Please fill all required fields.")
+            return redirect(url_for("register"))
 
         if password != confirm_password:
+            flash("Passwords do not match.")
+            return redirect(url_for("register"))
 
-            flash(
-                "Passwords do not match."
+        password_hash = generate_password_hash(password)
+
+        db = get_db()
+
+        try:
+
+            db.execute(
+                """
+                INSERT INTO users
+                (name, email, password_hash)
+                VALUES (?, ?, ?)
+                """,
+                (name, email, password_hash)
             )
 
-            return redirect(
-                url_for("register")
-            )
+            db.commit()
 
-        connection = get_db_connection()
+            flash("Registration successful. Please login.")
 
-        existing_user = connection.execute(
-            """
-            SELECT id
-            FROM users
-            WHERE email = ?
-            """,
-            (email,)
-        ).fetchone()
+        except sqlite3.IntegrityError:
 
-        if existing_user:
+            flash("Email already registered.")
 
-            connection.close()
+        finally:
 
-            flash(
-                "An account with this email already exists."
-            )
+            db.close()
 
-            return redirect(
-                url_for("register")
-            )
+        return redirect(url_for("login"))
 
-        password_hash = generate_password_hash(
-            password
-        )
-
-        connection.execute(
-            """
-            INSERT INTO users
-            (
-                name,
-                email,
-                password_hash
-            )
-            VALUES (?, ?, ?)
-            """,
-            (
-                name,
-                email,
-                password_hash
-            )
-        )
-
-        connection.commit()
-
-        connection.close()
-
-        send_email_notification(
-            email,
-            "Digital Legacy Manager - Account Created",
-            f"""
-Hello {name},
-
-Your Digital Legacy Manager account has been created successfully.
-
-Thank you,
-Digital Legacy Manager
-"""
-        )
-
-        flash(
-            "Account created successfully. Please login."
-        )
-
-        return redirect(
-            url_for("login")
-        )
-
-    return render_template(
-        "register.html"
-    )
+    return render_template("register.html")
 
 
 # =========================================================
 # LOGIN
 # =========================================================
 
-@app.route(
-    "/login",
-    methods=["GET", "POST"]
-)
+@app.route("/login", methods=["GET", "POST"])
 def login():
 
     if request.method == "POST":
 
-        email = request.form.get(
-            "email",
-            ""
-        ).strip().lower()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
 
-        password = request.form.get(
-            "password",
-            ""
-        )
+        db = get_db()
 
-        connection = get_db_connection()
-
-        user = connection.execute(
+        user = db.execute(
             """
             SELECT *
             FROM users
@@ -543,61 +240,26 @@ def login():
             (email,)
         ).fetchone()
 
-        connection.close()
+        db.close()
 
-        if not user:
-
-            flash(
-                "Invalid email or password."
-            )
-
-            return redirect(
-                url_for("login")
-            )
-
-        if not check_password_hash(
+        if user and check_password_hash(
             user["password_hash"],
             password
         ):
 
-            flash(
-                "Invalid email or password."
-            )
+            session.clear()
 
-            return redirect(
-                url_for("login")
-            )
+            session["user"] = user["name"]
+            session["email"] = user["email"]
+            session["user_id"] = user["id"]
 
-        session.clear()
+            flash("Login successful.")
 
-        session["user"] = user["name"]
+            return redirect(url_for("dashboard"))
 
-        session["email"] = user["email"]
+        flash("Invalid email or password.")
 
-        send_email_notification(
-            user["email"],
-            "Digital Legacy Manager - New Login",
-            f"""
-Hello {user["name"]},
-
-A successful login was completed on your Digital Legacy Manager account.
-
-Thank you,
-Digital Legacy Manager
-"""
-        )
-
-        flash(
-            "Login successful."
-        )
-
-        return redirect(
-            url_for("dashboard")
-        )
-
-    return render_template(
-        "login.html"
-    )
+    return render_template("login.html")
 
 
 # =========================================================
@@ -608,75 +270,113 @@ Digital Legacy Manager
 @login_required
 def dashboard():
 
-    connection = get_db_connection()
+    user_id = session["user_id"]
 
-    document_count = connection.execute(
+    db = get_db()
+
+    items = db.execute(
         """
-        SELECT COUNT(*)
-        FROM documents
-        WHERE user_email = ?
+        SELECT *
+        FROM legacy_items
+        WHERE user_id = ?
+        ORDER BY id DESC
         """,
-        (session["email"],)
-    ).fetchone()[0]
+        (user_id,)
+    ).fetchall()
 
-    connection.close()
+    contacts = db.execute(
+        """
+        SELECT *
+        FROM contacts
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (user_id,)
+    ).fetchall()
+
+    documents = db.execute(
+        """
+        SELECT *
+        FROM documents
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (user_id,)
+    ).fetchall()
+
+    db.close()
 
     return render_template(
         "dashboard.html",
         user=session["user"],
-        items=legacy_items,
-        contacts=emergency_contacts,
-        documents_count=document_count
+        items=items,
+        contacts=contacts,
+        documents=documents
     )
 
 
 # =========================================================
-# LEGACY
+# DIGITAL LEGACY
 # =========================================================
 
 @app.route("/legacy")
 @login_required
 def legacy():
 
+    user_id = session["user_id"]
+
+    db = get_db()
+
+    items = db.execute(
+        """
+        SELECT *
+        FROM legacy_items
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (user_id,)
+    ).fetchall()
+
+    db.close()
+
     return render_template(
         "legacy_instructions.html",
-        items=legacy_items
+        items=items
     )
 
 
-@app.route(
-    "/add-legacy",
-    methods=["POST"]
-)
+@app.route("/legacy/add", methods=["POST"])
 @login_required
 def add_legacy():
 
-    title = request.form.get(
-        "title",
-        ""
-    ).strip()
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
 
-    instruction = request.form.get(
-        "instruction",
-        ""
-    ).strip()
+    if not title:
+        flash("Title is required.")
+        return redirect(url_for("legacy"))
 
-    if title and instruction:
+    db = get_db()
 
-        legacy_items.append(
-            {
-                "title": title,
-                "instruction": instruction
-            }
+    db.execute(
+        """
+        INSERT INTO legacy_items
+        (user_id, title, description)
+        VALUES (?, ?, ?)
+        """,
+        (
+            session["user_id"],
+            title,
+            description
         )
-
-        flash(
-            "Legacy instruction added successfully."
-        )
-
-    return redirect(
-        url_for("legacy")
     )
+
+    db.commit()
+    db.close()
+
+    flash("Legacy information added successfully.")
+
+    return redirect(url_for("legacy"))
 
 
 # =========================================================
@@ -687,51 +387,73 @@ def add_legacy():
 @login_required
 def contacts():
 
+    user_id = session["user_id"]
+
+    db = get_db()
+
+    contact_list = db.execute(
+        """
+        SELECT *
+        FROM contacts
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (user_id,)
+    ).fetchall()
+
+    db.close()
+
     return render_template(
         "trusted_contacts.html",
-        contacts=emergency_contacts
+        contacts=contact_list
     )
 
 
-@app.route(
-    "/add-contact",
-    methods=["POST"]
-)
+@app.route("/contacts/add", methods=["POST"])
 @login_required
 def add_contact():
 
-    name = request.form.get(
-        "name",
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip()
+    phone = request.form.get("phone", "").strip()
+    relationship = request.form.get(
+        "relationship",
         ""
     ).strip()
 
-    email = request.form.get(
-        "email",
-        ""
-    ).strip()
+    if not name:
+        flash("Contact name is required.")
+        return redirect(url_for("contacts"))
 
-    phone = request.form.get(
-        "phone",
-        ""
-    ).strip()
+    db = get_db()
 
-    if name:
-
-        emergency_contacts.append(
-            {
-                "name": name,
-                "email": email,
-                "phone": phone
-            }
+    db.execute(
+        """
+        INSERT INTO contacts
+        (
+            user_id,
+            name,
+            email,
+            phone,
+            relationship
         )
-
-        flash(
-            "Trusted contact added successfully."
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            session["user_id"],
+            name,
+            email,
+            phone,
+            relationship
         )
-
-    return redirect(
-        url_for("contacts")
     )
+
+    db.commit()
+    db.close()
+
+    flash("Emergency contact added successfully.")
+
+    return redirect(url_for("contacts"))
 
 
 # =========================================================
@@ -742,384 +464,217 @@ def add_contact():
 @login_required
 def documents():
 
-    connection = get_db_connection()
+    user_id = session["user_id"]
 
-    documents_list = connection.execute(
+    db = get_db()
+
+    document_list = db.execute(
         """
         SELECT *
         FROM documents
-        WHERE user_email = ?
+        WHERE user_id = ?
         ORDER BY id DESC
         """,
-        (session["email"],)
+        (user_id,)
     ).fetchall()
 
-    connection.close()
+    db.close()
 
     return render_template(
         "documents.html",
-        documents=documents_list
+        documents=document_list
     )
 
 
-# =========================================================
-# ADD DOCUMENT
-# =========================================================
-
-@app.route(
-    "/add-document",
-    methods=["POST"]
-)
+@app.route("/documents/add", methods=["POST"])
 @login_required
 def add_document():
 
-    document_name = request.form.get(
-        "document_name",
-        ""
-    ).strip()
+    uploaded_file = request.files.get("document")
 
-    document_type = request.form.get(
-        "document_type",
-        ""
-    ).strip()
+    if not uploaded_file or not uploaded_file.filename:
+        flash("Please select a document.")
+        return redirect(url_for("documents"))
 
-    description = request.form.get(
-        "description",
-        ""
-    ).strip()
+    original_filename = uploaded_file.filename
 
-    document_file = request.files.get(
-        "document_file"
+    safe_filename = (
+        str(session["user_id"])
+        + "_"
+        + original_filename
+        .replace("/", "_")
+        .replace("\\", "_")
     )
 
-    if not document_name:
-
-        flash(
-            "Document name is required."
-        )
-
-        return redirect(
-            url_for("documents")
-        )
-
-    if not document_type:
-
-        flash(
-            "Document type is required."
-        )
-
-        return redirect(
-            url_for("documents")
-        )
-
-    if not document_file:
-
-        flash(
-            "Please select a document."
-        )
-
-        return redirect(
-            url_for("documents")
-        )
-
-    if document_file.filename == "":
-
-        flash(
-            "Please select a document."
-        )
-
-        return redirect(
-            url_for("documents")
-        )
-
-    if not allowed_file(
-        document_file.filename
-    ):
-
-        flash(
-            "Only PDF, JPG, JPEG and PNG files are allowed."
-        )
-
-        return redirect(
-            url_for("documents")
-        )
-
-    original_filename = secure_filename(
-        document_file.filename
-    )
-
-    original_data = document_file.read()
-
-    if not original_data:
-
-        flash(
-            "The selected file is empty."
-        )
-
-        return redirect(
-            url_for("documents")
-        )
-
-    encrypted_data = fernet.encrypt(
-        original_data
-    )
-
-    stored_filename = (
-        uuid.uuid4().hex
-        + ".enc"
-    )
-
-    stored_path = os.path.join(
+    file_path = os.path.join(
         UPLOAD_FOLDER,
-        stored_filename
+        safe_filename
     )
-
-    with open(
-        stored_path,
-        "wb"
-    ) as encrypted_file:
-
-        encrypted_file.write(
-            encrypted_data
-        )
-
-    connection = get_db_connection()
-
-    connection.execute(
-        """
-        INSERT INTO documents
-        (
-            user_email,
-            name,
-            document_type,
-            description,
-            original_filename,
-            stored_filename
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (
-            session["email"],
-            document_name,
-            document_type,
-            description,
-            original_filename,
-            stored_filename
-        )
-    )
-
-    connection.commit()
-
-    connection.close()
-
-    send_email_notification(
-        session["email"],
-        "Digital Legacy Manager - Document Uploaded",
-        f"""
-Hello {session["user"]},
-
-A new document was uploaded successfully.
-
-Document:
-{document_name}
-
-Type:
-{document_type}
-
-The document is stored in encrypted form.
-
-Thank you,
-Digital Legacy Manager
-"""
-    )
-
-    flash(
-        "Document encrypted and uploaded successfully!"
-    )
-
-    return redirect(
-        url_for("documents")
-    )
-
-
-# =========================================================
-# VIEW DOCUMENT
-# =========================================================
-
-@app.route(
-    "/document/<filename>"
-)
-@login_required
-def view_document(filename):
-
-    connection = get_db_connection()
-
-    document = connection.execute(
-        """
-        SELECT *
-        FROM documents
-        WHERE stored_filename = ?
-        AND user_email = ?
-        """,
-        (
-            filename,
-            session["email"]
-        )
-    ).fetchone()
-
-    connection.close()
-
-    if not document:
-
-        flash(
-            "Document not found or access denied."
-        )
-
-        return redirect(
-            url_for("documents")
-        )
-
-    stored_path = os.path.join(
-        UPLOAD_FOLDER,
-        document["stored_filename"]
-    )
-
-    if not os.path.exists(
-        stored_path
-    ):
-
-        flash(
-            "Encrypted file not found."
-        )
-
-        return redirect(
-            url_for("documents")
-        )
 
     try:
 
-        with open(
-            stored_path,
-            "rb"
-        ) as encrypted_file:
+        file_data = uploaded_file.read()
 
-            encrypted_data = encrypted_file.read()
+        encrypted_data = fernet.encrypt(file_data)
+
+        with open(file_path, "wb") as f:
+            f.write(encrypted_data)
+
+        db = get_db()
+
+        db.execute(
+            """
+            INSERT INTO documents
+            (
+                user_id,
+                filename,
+                original_filename
+            )
+            VALUES (?, ?, ?)
+            """,
+            (
+                session["user_id"],
+                safe_filename,
+                original_filename
+            )
+        )
+
+        db.commit()
+        db.close()
+
+        flash("Document uploaded successfully.")
+
+    except Exception as error:
+
+        print("Document upload error:", error)
+        flash("Unable to upload document.")
+
+    return redirect(url_for("documents"))
+
+
+@app.route("/documents/view/<int:document_id>")
+@login_required
+def view_document(document_id):
+
+    db = get_db()
+
+    document = db.execute(
+        """
+        SELECT *
+        FROM documents
+        WHERE id = ?
+        AND user_id = ?
+        """,
+        (
+            document_id,
+            session["user_id"]
+        )
+    ).fetchone()
+
+    db.close()
+
+    if not document:
+        flash("Document not found.")
+        return redirect(url_for("documents"))
+
+    file_path = os.path.join(
+        UPLOAD_FOLDER,
+        document["filename"]
+    )
+
+    if not os.path.exists(file_path):
+        flash("Document file not found.")
+        return redirect(url_for("documents"))
+
+    try:
+
+        with open(file_path, "rb") as f:
+            encrypted_data = f.read()
 
         decrypted_data = fernet.decrypt(
             encrypted_data
         )
 
+        temp_file = os.path.join(
+            UPLOAD_FOLDER,
+            "temp_" + document["original_filename"]
+        )
+
+        with open(temp_file, "wb") as f:
+            f.write(decrypted_data)
+
         return send_file(
-            io.BytesIO(
-                decrypted_data
-            ),
-            mimetype="application/octet-stream",
+            temp_file,
             as_attachment=False,
-            download_name=document[
-                "original_filename"
-            ]
+            download_name=document["original_filename"]
         )
 
-    except Exception:
+    except Exception as error:
 
-        flash(
-            "Unable to decrypt the document."
-        )
+        print("Document view error:", error)
 
-        return redirect(
-            url_for("documents")
-        )
+        flash("Unable to open document.")
+
+        return redirect(url_for("documents"))
 
 
-# =========================================================
-# DELETE DOCUMENT
-# =========================================================
-
-@app.route(
-    "/delete-document/<filename>",
-    methods=["POST"]
-)
+@app.route("/documents/delete/<int:document_id>", methods=["POST"])
 @login_required
-def delete_document(filename):
+def delete_document(document_id):
 
-    connection = get_db_connection()
+    db = get_db()
 
-    document = connection.execute(
+    document = db.execute(
         """
         SELECT *
         FROM documents
-        WHERE stored_filename = ?
-        AND user_email = ?
+        WHERE id = ?
+        AND user_id = ?
         """,
         (
-            filename,
-            session["email"]
+            document_id,
+            session["user_id"]
         )
     ).fetchone()
 
     if not document:
 
-        connection.close()
+        db.close()
 
-        flash(
-            "Document not found or access denied."
-        )
+        flash("Document not found.")
 
-        return redirect(
-            url_for("documents")
-        )
+        return redirect(url_for("documents"))
 
-    stored_path = os.path.join(
+    file_path = os.path.join(
         UPLOAD_FOLDER,
-        document["stored_filename"]
+        document["filename"]
     )
 
-    if os.path.exists(
-        stored_path
-    ):
+    if os.path.exists(file_path):
 
-        os.remove(
-            stored_path
-        )
+        try:
+            os.remove(file_path)
+        except Exception:
+            pass
 
-    connection.execute(
+    db.execute(
         """
         DELETE FROM documents
-        WHERE stored_filename = ?
-        AND user_email = ?
+        WHERE id = ?
+        AND user_id = ?
         """,
         (
-            filename,
-            session["email"]
+            document_id,
+            session["user_id"]
         )
     )
 
-    connection.commit()
+    db.commit()
+    db.close()
 
-    connection.close()
+    flash("Document deleted successfully.")
 
-    send_email_notification(
-        session["email"],
-        "Digital Legacy Manager - Document Deleted",
-        f"""
-Hello {session["user"]},
-
-The following document was deleted:
-
-{document["name"]}
-
-Thank you,
-Digital Legacy Manager
-"""
-    )
-
-    flash(
-        "Document deleted successfully."
-    )
-
-    return redirect(
-        url_for("documents")
-    )
+    return redirect(url_for("documents"))
 
 
 # =========================================================
@@ -1130,8 +685,22 @@ Digital Legacy Manager
 @login_required
 def settings():
 
+    db = get_db()
+
+    user = db.execute(
+        """
+        SELECT id, name, email
+        FROM users
+        WHERE id = ?
+        """,
+        (session["user_id"],)
+    ).fetchone()
+
+    db.close()
+
     return render_template(
-        "settings.html"
+        "settings.html",
+        user=user
     )
 
 
@@ -1144,32 +713,21 @@ def logout():
 
     session.clear()
 
-    flash(
-        "You have been logged out successfully."
-    )
+    flash("You have been logged out.")
 
-    return redirect(
-        url_for("login")
-    )
+    return redirect(url_for("login"))
 
 
 # =========================================================
-# INITIALIZE DATABASE
-# =========================================================
-
-create_users_table()
-
-create_documents_table()
-
-
-# =========================================================
-# RUN
+# RUN APPLICATION
 # =========================================================
 
 if __name__ == "__main__":
 
+    port = int(os.environ.get("PORT", 5000))
+
     app.run(
         host="0.0.0.0",
-        port=5000,
-        debug=True
+        port=port,
+        debug=False
     )
