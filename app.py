@@ -20,13 +20,20 @@ st.set_page_config(
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# IMPORTANT:
-# We are using a NEW database file.
-# This avoids the old password_hash error.
-DB_FILE = os.path.join(BASE_DIR, "streamlit_database.db")
+DB_FILE = os.path.join(
+    BASE_DIR,
+    "streamlit_database.db"
+)
 
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+UPLOAD_FOLDER = os.path.join(
+    BASE_DIR,
+    "uploads"
+)
+
+os.makedirs(
+    UPLOAD_FOLDER,
+    exist_ok=True
+)
 
 
 def get_db():
@@ -39,7 +46,6 @@ def create_database():
 
     db = get_db()
 
-    # USERS
     db.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,7 +56,6 @@ def create_database():
         )
     """)
 
-    # DIGITAL LEGACY
     db.execute("""
         CREATE TABLE IF NOT EXISTS legacy_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,7 +66,6 @@ def create_database():
         )
     """)
 
-    # EMERGENCY CONTACTS
     db.execute("""
         CREATE TABLE IF NOT EXISTS contacts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,7 +78,6 @@ def create_database():
         )
     """)
 
-    # DOCUMENTS
     db.execute("""
         CREATE TABLE IF NOT EXISTS documents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,7 +88,6 @@ def create_database():
         )
     """)
 
-    # EMERGENCY INFORMATION
     db.execute("""
         CREATE TABLE IF NOT EXISTS emergency_information (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,11 +107,13 @@ def create_database():
 create_database()
 
 # =========================================================
-# PASSWORD FUNCTIONS
+# PASSWORD
 # =========================================================
 
 def hash_password(password):
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return hashlib.sha256(
+        password.encode("utf-8")
+    ).hexdigest()
 
 
 def check_password(password, password_hash):
@@ -129,9 +133,6 @@ if "user_id" not in st.session_state:
 if "user_name" not in st.session_state:
     st.session_state.user_name = None
 
-if "page" not in st.session_state:
-    st.session_state.page = "Dashboard"
-
 
 # =========================================================
 # REGISTER
@@ -140,13 +141,20 @@ if "page" not in st.session_state:
 def register_page():
 
     st.title("🔐 Create Account")
-    st.write("Create your Digital Legacy Manager account.")
+
+    st.write(
+        "Create your Digital Legacy Manager account."
+    )
 
     with st.form("register_form"):
 
-        name = st.text_input("Full Name")
+        name = st.text_input(
+            "Full Name"
+        )
 
-        email = st.text_input("Email Address")
+        email = st.text_input(
+            "Email Address"
+        )
 
         password = st.text_input(
             "Password",
@@ -167,35 +175,55 @@ def register_page():
 
             if not name or not email or not password or not confirm_password:
 
-                st.error("Please fill all fields.")
+                st.error(
+                    "Please fill all fields."
+                )
 
             elif password != confirm_password:
 
-                st.error("Passwords do not match.")
+                st.error(
+                    "Passwords do not match."
+                )
 
             elif len(password) < 6:
 
-                st.error("Password must contain at least 6 characters.")
+                st.error(
+                    "Password must contain at least 6 characters."
+                )
 
             else:
 
                 db = get_db()
 
                 existing_user = db.execute(
-                    "SELECT id FROM users WHERE email = ?",
-                    (email.strip().lower(),)
+                    """
+                    SELECT id
+                    FROM users
+                    WHERE email = ?
+                    """,
+                    (
+                        email.strip().lower(),
+                    )
                 ).fetchone()
 
                 if existing_user:
 
-                    st.error("This email is already registered.")
+                    st.error(
+                        "This email is already registered."
+                    )
+
+                    db.close()
 
                 else:
 
                     db.execute(
                         """
                         INSERT INTO users
-                        (name, email, password_hash)
+                        (
+                            name,
+                            email,
+                            password_hash
+                        )
                         VALUES (?, ?, ?)
                         """,
                         (
@@ -212,10 +240,7 @@ def register_page():
                         "Account created successfully! Please login."
                     )
 
-                    st.session_state.page = "Login"
                     st.rerun()
-
-                db.close()
 
 
 # =========================================================
@@ -226,11 +251,15 @@ def login_page():
 
     st.title("🔑 Login")
 
-    st.write("Login to your Digital Legacy Manager.")
+    st.write(
+        "Login to your Digital Legacy Manager."
+    )
 
     with st.form("login_form"):
 
-        email = st.text_input("Email Address")
+        email = st.text_input(
+            "Email Address"
+        )
 
         password = st.text_input(
             "Password",
@@ -252,7 +281,9 @@ def login_page():
                 FROM users
                 WHERE email = ?
                 """,
-                (email.strip().lower(),)
+                (
+                    email.strip().lower(),
+                )
             ).fetchone()
 
             db.close()
@@ -263,12 +294,14 @@ def login_page():
             ):
 
                 st.session_state.logged_in = True
+
                 st.session_state.user_id = user["id"]
+
                 st.session_state.user_name = user["name"]
 
-                st.session_state.page = "Dashboard"
-
-                st.success("Login successful!")
+                st.success(
+                    "Login successful!"
+                )
 
                 st.rerun()
 
@@ -285,28 +318,42 @@ def login_page():
 
 def dashboard_page():
 
-    st.title("🏠 Digital Legacy Manager")
+    st.title(
+        "🏠 Digital Legacy Manager"
+    )
 
     st.subheader(
         f"Welcome, {st.session_state.user_name} 👋"
     )
 
-    db = get_db()
-
     user_id = st.session_state.user_id
 
+    db = get_db()
+
     legacy_count = db.execute(
-        "SELECT COUNT(*) FROM legacy_items WHERE user_id = ?",
+        """
+        SELECT COUNT(*)
+        FROM legacy_items
+        WHERE user_id = ?
+        """,
         (user_id,)
     ).fetchone()[0]
 
     contact_count = db.execute(
-        "SELECT COUNT(*) FROM contacts WHERE user_id = ?",
+        """
+        SELECT COUNT(*)
+        FROM contacts
+        WHERE user_id = ?
+        """,
         (user_id,)
     ).fetchone()[0]
 
     document_count = db.execute(
-        "SELECT COUNT(*) FROM documents WHERE user_id = ?",
+        """
+        SELECT COUNT(*)
+        FROM documents
+        WHERE user_id = ?
+        """,
         (user_id,)
     ).fetchone()[0]
 
@@ -315,18 +362,21 @@ def dashboard_page():
     col1, col2, col3 = st.columns(3)
 
     with col1:
+
         st.metric(
             "Digital Legacy Items",
             legacy_count
         )
 
     with col2:
+
         st.metric(
             "Emergency Contacts",
             contact_count
         )
 
     with col3:
+
         st.metric(
             "Documents",
             document_count
@@ -342,34 +392,6 @@ def dashboard_page():
         """
     )
 
-    st.subheader("Quick Access")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        if st.button(
-            "📦 Digital Legacy",
-            use_container_width=True
-        ):
-            st.session_state.page = "Digital Legacy"
-            st.rerun()
-
-    with col2:
-        if st.button(
-            "🚨 Emergency Contacts",
-            use_container_width=True
-        ):
-            st.session_state.page = "Emergency Contacts"
-            st.rerun()
-
-    with col3:
-        if st.button(
-            "📄 Documents",
-            use_container_width=True
-        ):
-            st.session_state.page = "Documents"
-            st.rerun()
-
 
 # =========================================================
 # DIGITAL LEGACY
@@ -377,7 +399,9 @@ def dashboard_page():
 
 def legacy_page():
 
-    st.title("📦 Digital Legacy")
+    st.title(
+        "📦 Digital Legacy"
+    )
 
     user_id = st.session_state.user_id
 
@@ -402,7 +426,9 @@ def legacy_page():
 
             if not title:
 
-                st.error("Please enter a title.")
+                st.error(
+                    "Please enter a title."
+                )
 
             else:
 
@@ -411,7 +437,11 @@ def legacy_page():
                 db.execute(
                     """
                     INSERT INTO legacy_items
-                    (user_id, title, description)
+                    (
+                        user_id,
+                        title,
+                        description
+                    )
                     VALUES (?, ?, ?)
                     """,
                     (
@@ -475,7 +505,9 @@ def legacy_page():
 
 def contacts_page():
 
-    st.title("🚨 Emergency Contacts")
+    st.title(
+        "🚨 Emergency Contacts"
+    )
 
     user_id = st.session_state.user_id
 
@@ -518,7 +550,13 @@ def contacts_page():
                 db.execute(
                     """
                     INSERT INTO contacts
-                    (user_id, name, email, phone, relationship)
+                    (
+                        user_id,
+                        name,
+                        email,
+                        phone,
+                        relationship
+                    )
                     VALUES (?, ?, ?, ?, ?)
                     """,
                     (
@@ -588,7 +626,9 @@ def contacts_page():
 
 def documents_page():
 
-    st.title("📄 Documents")
+    st.title(
+        "📄 Documents"
+    )
 
     user_id = st.session_state.user_id
 
@@ -720,7 +760,9 @@ def documents_page():
 
 def emergency_information_page():
 
-    st.title("🩺 Emergency Information")
+    st.title(
+        "🩺 Emergency Information"
+    )
 
     user_id = st.session_state.user_id
 
@@ -745,9 +787,16 @@ def emergency_information_page():
     if existing:
 
         current_blood = existing["blood_group"] or ""
+
         current_allergies = existing["allergies"] or ""
-        current_conditions = existing["medical_conditions"] or ""
-        current_notes = existing["emergency_notes"] or ""
+
+        current_conditions = (
+            existing["medical_conditions"] or ""
+        )
+
+        current_notes = (
+            existing["emergency_notes"] or ""
+        )
 
     with st.form("emergency_form"):
 
@@ -840,7 +889,9 @@ def emergency_information_page():
 
 def settings_page():
 
-    st.title("⚙️ Settings")
+    st.title(
+        "⚙️ Settings"
+    )
 
     st.write(
         f"**Name:** {st.session_state.user_name}"
@@ -881,7 +932,6 @@ def logout():
     st.session_state.logged_in = False
     st.session_state.user_id = None
     st.session_state.user_name = None
-    st.session_state.page = "Login"
 
     st.rerun()
 
@@ -892,7 +942,9 @@ def logout():
 
 if not st.session_state.logged_in:
 
-    st.sidebar.title("🔐 Digital Legacy Manager")
+    st.sidebar.title(
+        "🔐 Digital Legacy Manager"
+    )
 
     menu = st.sidebar.radio(
         "Menu",
