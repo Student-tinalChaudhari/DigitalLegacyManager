@@ -24,7 +24,6 @@
 
 </nav>
 
-
 <div class="dashboard">
 
     <div class="welcome">
@@ -37,7 +36,6 @@
 
     </div>
 
-
     <!-- Navigation Modules -->
 
     <section class="dashboard-section">
@@ -45,6 +43,8 @@
         <h2>📌 Manage Your Digital Legacy</h2>
 
         <div class="cards">
+
+            <!-- Digital Legacy -->
 
             <div class="card">
 
@@ -64,6 +64,8 @@
             </div>
 
 
+            <!-- Emergency Contacts -->
+
             <div class="card">
 
                 <div class="card-icon">👨‍👩‍👧</div>
@@ -82,6 +84,8 @@
             </div>
 
 
+            <!-- Documents -->
+
             <div class="card">
 
                 <div class="card-icon">📄</div>
@@ -89,16 +93,18 @@
                 <h3>Documents</h3>
 
                 <p>
-                    Organize important document information.
+                    Organize and securely manage important documents.
                 </p>
 
-                <a href="{{ url_for('documents_page') }}"
+                <a href="{{ url_for('documents') }}"
                    class="primary-btn">
                     Open Documents
                 </a>
 
             </div>
 
+
+            <!-- Settings -->
 
             <div class="card">
 
@@ -130,16 +136,22 @@
 
         <div class="cards">
 
+            <!-- Digital Legacy Items -->
+
             <div class="card">
 
                 <div class="card-icon">📁</div>
 
                 <h3>{{ items|length }}</h3>
 
-                <p>Digital Legacy Items</p>
+                <p>
+                    Digital Legacy Items
+                </p>
 
             </div>
 
+
+            <!-- Emergency Contacts -->
 
             <div class="card">
 
@@ -147,10 +159,14 @@
 
                 <h3>{{ contacts|length }}</h3>
 
-                <p>Emergency Contacts</p>
+                <p>
+                    Emergency Contacts
+                </p>
 
             </div>
 
+
+            <!-- Documents -->
 
             <div class="card">
 
@@ -158,7 +174,9 @@
 
                 <h3>{{ documents|length }}</h3>
 
-                <p>Documents</p>
+                <p>
+                    Documents
+                </p>
 
             </div>
 
